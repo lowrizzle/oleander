@@ -20,7 +20,11 @@ public:
     PedalInfo info;
     info.name = "Boost";
     info.knobs = {
-        PedalKnob{.name = "boost", .value = boost_, .tweak_amount = 0.1},
+        PedalKnob{.name = "boost",
+                  .value = boost_,
+                  .tweak_amount = 0.1,
+                  .min = 0,
+                  .max = 5},
     };
     return info;
   }

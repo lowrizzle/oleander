@@ -230,9 +230,23 @@ public:
   AddPedalHandler(PedalBoard* pedal_board, ChangeNotifier notifier)
       : pedal_board_(pedal_board), notifier_(notifier) {}
 
+  // `pedal_name` arrives as the raw `<string>` route segment -- unlike a
+  // query-string value (e.g. /preset/<n>/save?name=...), crow does not
+  // URL-decode route-captured path segments, so a name containing
+  // characters the browser had to percent-encode (a space, for instance)
+  // shows up here still encoded (e.g. "Sky%20Chive") and would otherwise
+  // never match a registry key. Decode it the same way crow already
+  // decodes query-string values (crow::qs_decode), rather than requiring
+  // every pedal name to avoid such characters.
   crow::response operator()(const std::string& pedal_name) const {
+    std::string decoded_name = pedal_name;
+    if (!decoded_name.empty()) {
+      int decoded_length = crow::qs_decode(&decoded_name[0]);
+      decoded_name.resize(decoded_length);
+    }
+
     auto pedal_factory =
-        PedalRegistry::GetInstance().GetPedalFactoryOrNull(pedal_name);
+        PedalRegistry::GetInstance().GetPedalFactoryOrNull(decoded_name);
     if (!pedal_factory) {
       return crow::response(404);
     }

@@ -16,13 +16,21 @@ public:
     info.name = GetName();
 
     info.knobs = {
-        PedalKnob{
-            .name = "cut_off_hz", .value = cut_off_hz_, .tweak_amount = 100},
+        PedalKnob{.name = "cut_off_hz",
+                  .value = cut_off_hz_,
+                  .tweak_amount = 100,
+                  .min = 20,
+                  .max = 20000},
         PedalKnob{.name = "sample_rate",
                   .value = static_cast<double>(sample_rate_),
-                  .tweak_amount = 100},
-        PedalKnob{
-            .name = "q", .value = static_cast<double>(q_), .tweak_amount = 0.1},
+                  .tweak_amount = 100,
+                  .min = 8000,
+                  .max = 96000},
+        PedalKnob{.name = "q",
+                  .value = static_cast<double>(q_),
+                  .tweak_amount = 0.1,
+                  .min = 0.1,
+                  .max = 10},
     };
     return info;
   }

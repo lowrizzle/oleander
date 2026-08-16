@@ -1,6 +1,6 @@
 # Oleander
 
-A Raspberry Pi 4-based multi-effects pedal for guitar and synthesizers, inspired by [GuitarEffects](https://github.com/Quinny/GuitarEffects) but redesigned for a compact, headless, web-controlled stompbox form factor.
+A Raspberry Pi 4-based multi-effects pedal system for synth players and dawless jammers, inspired by [GuitarEffects](https://github.com/Quinny/GuitarEffects) but redesigned for a compact, headless, web-controlled stompbox form factor.
 
 ## Overview
 
@@ -8,7 +8,8 @@ Oleander runs a chain of real-time audio effects loaded from a web browser on an
 
 ## Key Features
 
-- **Real-time audio effects chain** — delay, reverb, chorus, lo-fi, distortion, compression, filters, and more
+- **Real-time audio effects chain** — delay, reverb, granular texture, distortion, compression, filters, and more, including "Sky Chive," a granular texture effect ported from Mutable Instruments' open-source Clouds firmware
+- **Vintage-synth-style control surface** — vertical faders and LED pushbuttons on a walnut-panel web UI, in place of a generic web form
 - **Web-based control** — add, remove, and configure pedals from any browser via `oleander.local`
 - **5 presets** — save the whole effects chain (which pedals, all knob values, on/off state) into any of 5 slots, and recall one instantly from a footswitch or the browser
 - **Physical controls** — 5 latching microswitches for instant preset recall

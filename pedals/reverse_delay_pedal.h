@@ -31,10 +31,16 @@ public:
     info.name = "ReverseDelay";
 
     info.knobs = {
-        PedalKnob{
-            .name = "seconds", .value = delay_seconds_, .tweak_amount = 0.1},
-        PedalKnob{
-            .name = "delay_blend", .value = delay_blend_, .tweak_amount = 0.1}};
+        PedalKnob{.name = "seconds",
+                  .value = delay_seconds_,
+                  .tweak_amount = 0.1,
+                  .min = 0.001,
+                  .max = 10},
+        PedalKnob{.name = "delay_blend",
+                  .value = delay_blend_,
+                  .tweak_amount = 0.1,
+                  .min = 0,
+                  .max = 1}};
 
     return info;
   }

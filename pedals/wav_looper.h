@@ -46,9 +46,20 @@ class WavLooper : public Pedal {
     info.knobs = {
         PedalKnob{.name = "file",
                   .value = static_cast<double>(current_file_index_),
-                  .tweak_amount = 1},
-        PedalKnob{
-            .name = "wav_blend", .value = wav_blend_, .tweak_amount = 0.1},
+                  .tweak_amount = 1,
+                  .min = 0,
+                  // file_paths_ is scanned from disk at construction, so
+                  // this bound isn't a fixed constant like every other
+                  // pedal's -- guard against an empty directory rather
+                  // than reporting a negative max.
+                  .max = file_paths_.empty()
+                             ? 0.0
+                             : static_cast<double>(file_paths_.size() - 1)},
+        PedalKnob{.name = "wav_blend",
+                  .value = wav_blend_,
+                  .tweak_amount = 0.1,
+                  .min = 0,
+                  .max = 1},
     };
 
     return info;

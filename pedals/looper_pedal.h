@@ -43,8 +43,11 @@ public:
     info.name = "Looper";
 
     info.knobs = {
-        PedalKnob{
-            .name = "loop_blend", .value = loop_blend_, .tweak_amount = 0.1},
+        PedalKnob{.name = "loop_blend",
+                  .value = loop_blend_,
+                  .tweak_amount = 0.1,
+                  .min = 0,
+                  .max = 1},
     };
     return info;
   }

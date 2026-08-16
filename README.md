@@ -1,10 +1,13 @@
 # Oleander - Multi-Effects Pedal
 
-A Raspberry Pi 4-based multi-effects pedal for guitar and synthesizers, forked from [GuitarEffects](https://github.com/Quinny/GuitarEffects).
+A Raspberry Pi 4-based multi-effects pedal system built for synth players and dawless jammers, forked from [GuitarEffects](https://github.com/Quinny/GuitarEffects).
+
+![Oleander's web control interface, showing the preset bar, available pedals, and the Sky Chive granular effect on a vintage-synth-style fader panel](docs/images/web-ui.jpg)
 
 ## Features
 
-- Real-time audio effects chain (delay, reverb, chorus, lo-fi, distortion, compression, filters, and more)
+- Real-time audio effects chain (delay, reverb, granular texture, distortion, compression, filters, and more)
+- Vintage-synth-style control surface — vertical faders and LED pushbuttons, not a generic web form
 - Web-based control via `http://oleander.local` in any browser
 - 5 latching microswitches for physical pedal on/off control
 - SSD1306 OLED display showing active pedal name, knob values, and status
@@ -58,6 +61,7 @@ Web Browser ──▶ Oleander Server (C++/Crow) ──▶ USB Audio I/O
 - [docs/HARDWARE.md](docs/HARDWARE.md) — wiring diagrams, BOM, troubleshooting
 - [docs/SOFTWARE.md](docs/SOFTWARE.md) — software architecture and implementation plan
 - [docs/codefix.md](docs/codefix.md) — history of bugs found and fixed
+- [docs/THIRD_PARTY.md](docs/THIRD_PARTY.md) — third-party code and licenses
 
 ## License
 

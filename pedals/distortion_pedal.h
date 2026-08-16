@@ -23,12 +23,21 @@ class DistortionPedal : public Pedal {
     info.name = "Distortion";
 
     info.knobs = {
-        PedalKnob{.name = "drive", .value = drive_, .tweak_amount = 0.1},
-        PedalKnob{
-            .name = "frequency_hz", .value = frequency_hz_, .tweak_amount = 50},
+        PedalKnob{.name = "drive",
+                  .value = drive_,
+                  .tweak_amount = 0.1,
+                  .min = 0,
+                  .max = 3},
+        PedalKnob{.name = "frequency_hz",
+                  .value = frequency_hz_,
+                  .tweak_amount = 50,
+                  .min = 20,
+                  .max = 20000},
         PedalKnob{.name = "curve_sample",
                   .value = curve_sample_,
-                  .tweak_amount = 100},
+                  .tweak_amount = 100,
+                  .min = 256,
+                  .max = 8192},
     };
     return info;
   }

@@ -37,13 +37,26 @@ class CompressorPedal : public Pedal {
     info.name = "Compressor";
 
     info.knobs = {
-        PedalKnob{
-            .name = "attack", .value = attack_seconds_, .tweak_amount = 0.1},
-        PedalKnob{
-            .name = "release", .value = release_seconds_, .tweak_amount = 0.1},
-        PedalKnob{
-            .name = "threshold", .value = threshold_, .tweak_amount = 0.1},
-        PedalKnob{.name = "ratio", .value = ratio_, .tweak_amount = 0.1},
+        PedalKnob{.name = "attack",
+                  .value = attack_seconds_,
+                  .tweak_amount = 0.1,
+                  .min = 0.001,
+                  .max = 2},
+        PedalKnob{.name = "release",
+                  .value = release_seconds_,
+                  .tweak_amount = 0.1,
+                  .min = 0.001,
+                  .max = 2},
+        PedalKnob{.name = "threshold",
+                  .value = threshold_,
+                  .tweak_amount = 0.1,
+                  .min = 0,
+                  .max = 1},
+        PedalKnob{.name = "ratio",
+                  .value = ratio_,
+                  .tweak_amount = 0.1,
+                  .min = 0,
+                  .max = 20},
     };
     return info;
   }

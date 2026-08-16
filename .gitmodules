@@ -21,3 +21,6 @@
 [submodule "matplotlib-cpp"]
   path = matplotlib-cpp
   url = https://github.com/lava/matplotlib-cpp
+[submodule "eurorack"]
+	path = eurorack
+	url = https://github.com/pichenettes/eurorack

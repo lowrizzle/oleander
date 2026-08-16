@@ -10,6 +10,18 @@ struct PedalKnob {
   std::string name;
   double value;
   double tweak_amount;
+  // Valid range for this knob's value -- lets the web UI size/position a
+  // fader. Most pedals don't enforce these bounds in AdjustKnob() (the
+  // range here is declarative/UI-facing, not a new validation layer), a
+  // handful (e.g. Sky Chive's Clamp01, the various *_pedal.h "seconds"
+  // knobs) already do.
+  double min = 0.0;
+  double max = 1.0;
+  // Non-empty => the UI renders this knob as a row of labels.size() LED
+  // pushbuttons (one per integer position from min to max) instead of a
+  // fader -- e.g. {"OFF", "ON"} for a boolean, or a short enum's option
+  // names. Empty (the common case) => continuous fader.
+  std::vector<std::string> labels;
 };
 
 struct PedalInfo {

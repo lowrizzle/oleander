@@ -6,6 +6,7 @@
 #include "pedals/auto_wah_pedal.h"
 #include "pedals/bandpass_pedal.h"
 #include "pedals/boost_pedal.h"
+#include "pedals/clouds_pedal.h"
 #include "pedals/compressor_pedal.h"
 #include "pedals/delay_pedal.h"
 #include "pedals/distortion_pedal.h"

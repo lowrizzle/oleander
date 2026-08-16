@@ -5,7 +5,7 @@ class AvailablePedal extends React.Component {
   }
 
   add() {
-    $.get("/add_pedal/" + this.props.name);
+    $.get("/add_pedal/" + encodeURIComponent(this.props.name));
   }
 
   render() {
@@ -49,42 +49,127 @@ class AvailablePedalList extends React.Component {
   }
 }
 
-// A knob which adjusts the settings of an active pedal.
-class Knob extends React.Component {
+// How often a dragging Fader is allowed to POST an in-progress value to the
+// server, in ms -- keeps a fast drag from firing one HTTP request per
+// mousemove event. The final position on release always goes through
+// regardless of this throttle, via the `force` argument to sendUpdate.
+const FADER_UPDATE_THROTTLE_MS = 40;
+
+// A vertical fader for a continuous-range knob (knob.labels is empty).
+// Real hardware sliders don't glow or fill with color -- cap position
+// against the tick marks is the whole readout -- so this renders the same
+// way: no fill, just a cap position derived from (value - min)/(max - min).
+class Fader extends React.Component {
   constructor(props) {
     super(props);
+    this.state = { localValue: null };
+    this.dragging = false;
+    this.lastSentAt = 0;
+    this.onDown = this.onDown.bind(this);
+    this.onMove = this.onMove.bind(this);
+    this.onUp = this.onUp.bind(this);
   }
 
-  tweak(sign) {
-    const knobUpdate = {
-      'name': this.props.name,
-      'value': this.props.value + (sign * this.props.tweakAmount),
-    };
-    $.get('/adjust_knob/' + this.props.pedalId, knobUpdate);
+  currentValue() {
+    return this.state.localValue !== null ? this.state.localValue : this.props.value;
   }
 
-  onChange(event) {
-    const knobUpdate = {
-      'name': this.props.name,
-      'value': event.target.value,
-    };
+  sendUpdate(value, force) {
+    const now = Date.now();
+    if (!force && now - this.lastSentAt < FADER_UPDATE_THROTTLE_MS) {
+      return;
+    }
+    this.lastSentAt = now;
+    $.get('/adjust_knob/' + this.props.pedalId, { 'name': this.props.name, 'value': value });
+  }
 
-    $.get('/adjust_knob/' + this.props.pedalId, knobUpdate);
+  onDown(event) {
+    this.dragging = true;
+    this.startY = event.touches ? event.touches[0].clientY : event.clientY;
+    this.startVal = this.currentValue();
+    document.addEventListener('mousemove', this.onMove);
+    document.addEventListener('touchmove', this.onMove, { passive: false });
+    document.addEventListener('mouseup', this.onUp);
+    document.addEventListener('touchend', this.onUp);
+    event.preventDefault();
+  }
+
+  onMove(event) {
+    if (!this.dragging) {
+      return;
+    }
+    const y = event.touches ? event.touches[0].clientY : event.clientY;
+    const dy = this.startY - y;
+    const range = this.props.max - this.props.min;
+    const raw = this.startVal + dy * (range / 108);
+    const value = Math.min(this.props.max, Math.max(this.props.min, raw));
+    this.setState({ localValue: value });
+    this.sendUpdate(value, false);
+    event.preventDefault();
+  }
+
+  onUp() {
+    if (!this.dragging) {
+      return;
+    }
+    this.dragging = false;
+    this.sendUpdate(this.currentValue(), /* force= */ true);
+    document.removeEventListener('mousemove', this.onMove);
+    document.removeEventListener('touchmove', this.onMove);
+    document.removeEventListener('mouseup', this.onUp);
+    document.removeEventListener('touchend', this.onUp);
+    this.setState({ localValue: null });
   }
 
   render() {
+    const value = this.currentValue();
+    const frac = (value - this.props.min) / (this.props.max - this.props.min);
+    const ticks = [];
+    for (let i = 0; i <= 8; i++) {
+      ticks.push(<div key={i} class={i === 4 ? "mid" : ""}></div>);
+    }
+
     return (
-      <div class="knob">
-        <span class="knob-label">{this.props.name}</span>
-        <button class="btn btn-dark btn-sm knob-btn"
-                onClick={this.tweak.bind(this, -1)}>
-          -
-        </button>
-        <input class="knob-input" value={this.props.value} onChange={this.onChange.bind(this)} />
-        <button class="btn btn-dark btn-sm knob-btn"
-                onClick={this.tweak.bind(this, 1)}>
-          +
-        </button>
+      <div class="control">
+        <div class="fader" onMouseDown={this.onDown} onTouchStart={this.onDown}>
+          <div class="fader-ticks">{ticks}</div>
+          <div class="fader-slot"></div>
+          <div class="fader-cap" style={{ bottom: (frac * 100) + "%" }}></div>
+        </div>
+        <div class="ctl-value">{value.toFixed(2)}</div>
+        <div class="ctl-label">{this.props.name}</div>
+      </div>
+    )
+  }
+}
+
+// A row of jewel-LED pushbuttons for a discrete/enum knob (knob.labels is
+// non-empty) -- covers both booleans (labels=["OFF","ON"]) and short enums
+// (e.g. Sky Chive's mode). One button is lit at the current integer
+// position; clicking a button jumps straight to it.
+class LedButtonGroup extends React.Component {
+  select(index) {
+    $.get('/adjust_knob/' + this.props.pedalId,
+          { 'name': this.props.name, 'value': this.props.min + index });
+  }
+
+  render() {
+    const activeIndex = Math.round(this.props.value - this.props.min);
+    const buttons = this.props.labels.map((label, index) => (
+      <div key={label}
+           class="ledbtn"
+           data-on={index === activeIndex ? "true" : "false"}
+           onClick={this.select.bind(this, index)}>
+        <span class="txt">{label}</span>
+        <div class="led-jewel"></div>
+      </div>
+    ));
+
+    return (
+      <div class="control">
+        <div class="ledbtn-row"><div class="modebtns">{buttons}</div></div>
+        <div class="ctl-value">{this.props.labels[activeIndex]}</div>
+        <div class="ctl-label">{this.props.name}</div>
       </div>
     )
   }
@@ -110,43 +195,51 @@ class ActivePedal extends React.Component {
 
   render() {
     const knobs = this.props.knobs.map((knob) => {
+      if (knob.labels && knob.labels.length > 0) {
+        return (
+            <LedButtonGroup
+              key={knob.name}
+              name={knob.name}
+              value={knob.value}
+              min={knob.min}
+              max={knob.max}
+              labels={knob.labels}
+              pedalId={this.props.id} />
+        )
+      }
       return (
-          <Knob
+          <Fader
             key={knob.name}
             name={knob.name}
             value={knob.value}
-            tweakAmount={knob.tweak_amount}
+            min={knob.min}
+            max={knob.max}
             pedalId={this.props.id} />
       )
     });
 
-    const btnClass = this.props.state === "Enabled"
-      ? "btn btn-success pedal-switch"
-      : "btn btn-secondary pedal-switch";
+    const enabled = this.props.state === "Enabled";
 
     return (
-      <div class="active-pedal-card">
-        <div class="pedal-header">
-          <h5 class="pedal-name">{this.props.name}</h5>
-          <span class="pedal-index">#{this.props.position}</span>
+      <div class="walnut active-pedal-card">
+        <div class="brand-row">
+          <h5>{this.props.name}</h5>
+          <span class="mono">SLOT {this.props.position}</span>
         </div>
 
-        <div class="pedal-knobs">
+        <div class="controls-grid">
           {knobs}
         </div>
 
         <div class="pedal-actions">
-          <button
-            class={btnClass}
-            onClick={this.push.bind(this)}>
-            {this.props.state === "Enabled" ? "ON" : "OFF"}
-          </button>
-          &nbsp;
-          <button
-            class="btn btn-danger btn-sm"
-            onClick={this.remove.bind(this)} >
-            Remove
-          </button>
+          <div class="ledbtn power-btn" data-on={enabled ? "true" : "false"}
+               onClick={this.push.bind(this)} title={enabled ? "On" : "Off"}>
+            <span class="txt">PWR</span>
+            <div class="led-jewel"></div>
+          </div>
+          <div class="remove-btn" onClick={this.remove.bind(this)} title="Remove">
+            &times;
+          </div>
         </div>
       </div>
     )

@@ -74,7 +74,7 @@ Behringer XENYX 302USB  →    Pi 4 USB-A port (via USB-A to USB-B cable)
 - Standard USB Audio Class device — no drivers needed
 - Appears as an ALSA device enumerated by RtAudio
 - On first boot the server auto-selects it (and writes the choice to `devices.txt`) rather than prompting, since there's no terminal attached when it's launched by systemd; to pick a specific device by hand instead (e.g. if more than one USB audio device is plugged in), run `./bin/server debug` over SSH once before starting the service
-- Guitar input and headphone/line output both pass through the interface
+- Instrument/line input and headphone/line output both pass through the interface
 
 **Setting/changing the device yourself:** `devices.txt` (in the repo root) is a plain text file, two lines: the input device's exact name on line 1, the output device's exact name on line 2 -- there's no web UI or HTTP endpoint for this (the server picks a device once, at startup, before it even starts listening). To find the exact name string to use:
 

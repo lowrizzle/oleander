@@ -9,6 +9,18 @@ crow::json::wvalue SerializePedalKnob(const PedalKnob& pedal_knob) {
   serialized["name"] = pedal_knob.name;
   serialized["value"] = pedal_knob.value;
   serialized["tweak_amount"] = pedal_knob.tweak_amount;
+  serialized["min"] = pedal_knob.min;
+  serialized["max"] = pedal_knob.max;
+  // Omitted entirely (rather than an empty list) when there are no
+  // labels, so the frontend's "is this a fader or an LED button group"
+  // check is just presence-of-key.
+  if (!pedal_knob.labels.empty()) {
+    std::vector<crow::json::wvalue> labels;
+    for (const auto& label : pedal_knob.labels) {
+      labels.push_back(label);
+    }
+    serialized["labels"] = std::move(labels);
+  }
   return serialized;
 }
 

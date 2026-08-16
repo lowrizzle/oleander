@@ -9,7 +9,9 @@ COMPILE_FLAGS = -lpthread \
 							 	-I . \
 								-D CROW_DISABLE_STATIC_DIR \
 								-I cycfi/Q/q_lib/include \
-								-I cycfi/infra/include
+								-I cycfi/infra/include \
+								-I eurorack \
+								-D TEST
 
 MATPLOT_FLAGS = -I/usr/include/python2.7 \
 								-I/System/Library/Frameworks/Python.framework/Versions/2.7/Extras/lib/python/numpy/core/include \
@@ -25,6 +27,26 @@ MATPLOT_FLAGS = -I/usr/include/python2.7 \
 # linking against some external copy, RtAudio.cpp is compiled directly
 # alongside whichever target actually uses it.
 RTAUDIO_SRC = rtaudio/RtAudio.cpp
+
+# The "Sky Chive" pedal's granular engine is a port of Mutable Instruments'
+# open-source Clouds firmware (eurorack/, vendored as a git submodule --
+# see pedals/clouds_pedal.h and docs/THIRD_PARTY.md). clouds/dsp/ is
+# header-only except for these files, which its own upstream desktop test
+# build (clouds/test/makefile) also compiles directly rather than linking a
+# prebuilt library. -D TEST is the same macro that build uses to strip a
+# `#ifndef TEST` branch that would otherwise pull in STM32-only headers
+# (clouds/drivers/debug_pin.h) -- safe to define globally since nothing
+# else in this codebase defines or checks a TEST macro.
+CLOUDS_SRC = eurorack/clouds/dsp/granular_processor.cc \
+						 eurorack/clouds/dsp/correlator.cc \
+						 eurorack/clouds/dsp/mu_law.cc \
+						 eurorack/clouds/resources.cc \
+						 eurorack/clouds/dsp/pvoc/frame_transformation.cc \
+						 eurorack/clouds/dsp/pvoc/phase_vocoder.cc \
+						 eurorack/clouds/dsp/pvoc/stft.cc \
+						 eurorack/stmlib/dsp/atan.cc \
+						 eurorack/stmlib/dsp/units.cc \
+						 eurorack/stmlib/utils/random.cc
 
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
@@ -56,10 +78,10 @@ makedir:
 all: makedir record server
 
 plot: makedir
-	${COMPILER} plot.cpp ${COMPILE_FLAGS} ${MATPLOT_FLAGS} -o ./bin/plot
+	${COMPILER} plot.cpp ${CLOUDS_SRC} ${COMPILE_FLAGS} ${MATPLOT_FLAGS} -o ./bin/plot
 
 server: makedir
-	${COMPILER} web/main.cpp ${RTAUDIO_SRC} ${COMPILE_FLAGS} -o ./bin/server
+	${COMPILER} web/main.cpp ${RTAUDIO_SRC} ${CLOUDS_SRC} ${COMPILE_FLAGS} -o ./bin/server
 
 record: makedir
 	${COMPILER} record.cpp ${RTAUDIO_SRC} ${COMPILE_FLAGS} -o ./bin/record

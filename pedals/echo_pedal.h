@@ -32,10 +32,17 @@ class EchoPedal : public Pedal {
     info.knobs = {
         PedalKnob{.name = "echo_seconds",
                   .value = echo_seconds_,
-                  .tweak_amount = 0.1},
+                  .tweak_amount = 0.1,
+                  .min = 0.001,
+                  .max = 10},
         PedalKnob{.name = "decay_factor",
                   .value = decay_factor_,
-                  .tweak_amount = 0.5},
+                  .tweak_amount = 0.5,
+                  // Floor above 0: decay_factor is a divisor in Transform(),
+                  // so a fader that could reach 0 would let the UI itself
+                  // trigger a divide-by-zero the old text box could too.
+                  .min = 1,
+                  .max = 10},
     };
     return info;
   }

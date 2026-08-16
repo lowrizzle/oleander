@@ -29,8 +29,12 @@ oleander-effects/
 │       └── style.css            # Modified: preset bar styles, dark-theme contrast fix
 │
 ├── pedals/
-│   ├── all_pedals.h             # Unchanged from upstream
-│   └── [existing pedals...]    # Unchanged from upstream
+│   ├── all_pedals.h             # Modified: includes clouds_pedal.h
+│   ├── clouds_pedal.h           # NEW: "Sky Chive" granular effect
+│   └── [existing pedals...]    # Modified: Describe() declares min/max/labels
+│
+├── eurorack/                    # NEW submodule: Mutable Instruments Clouds
+│   └── stmlib/                  # NEW submodule (nested): its dependency
 │
 ├── hardware/
 │   └── hardware_service.py      # Modified: presets over WebSocket instead of pedal-toggle polling
@@ -151,7 +155,7 @@ Every mutating endpoint above persists the live board as `PresetStore`'s "curren
 - **Switch status dot:** each preset tile also shows a small dot next to its slot number reflecting that footswitch's live physical latch state (dim grey = off, lit amber = on), fetched from `GET /switches` on the same refresh cycle as the preset list. This is independent of which preset is "active" -- a switch can be latched on while the board has since been freely edited away from it -- and gives visible confirmation that a footswitch press reached the server even when the OLED isn't working.
 - **Stable pedal addressing:** pedal actions (adjust knob, push, remove) now use each pedal's server-assigned `id` instead of its position in the list, and `id` is used as the React `key` for list items.
 - **WebSocket reconnect:** the socket connection now lives in the top-level `App` component (shared by the preset bar and pedal board) and reconnects with exponential backoff if it drops, instead of silently going stale.
-- **Switch-style footswitch buttons:** unchanged from before -- large, pedal-style ON/OFF buttons per pedal, green when enabled.
+- **Fader/LED control surface:** replaced (see Component 11 below) -- each pedal's knobs render as a walnut control panel instead of the plain white card and +/- text-box knobs described here originally.
 - **Splash screen:** unchanged -- shown when no pedals are active.
 
 ### 5. web/static/style.css Changes
@@ -236,6 +240,23 @@ Previously identical to the upstream repo aside from the P2 #4 bounds-checking/e
 
 **Stream error recovery:** RtAudio's own handling of a stream-time error (e.g. the ALSA device disappearing mid-stream -- `RtApiAlsa::callbackEvent: audio read error, No such device.`) is to log a `WARNING` and keep calling the audio callback forever; it never stops the stream, never retries opening the device, and gives the rest of the process no way to notice apart from watching stderr. `AudioTransformer`'s constructor now passes a `RtAudioErrorCallback` (`internal::OnStreamError` in `audio_transformer.h`) as `openStream()`'s 9th argument, which was previously left as the default `NULL`. It tracks consecutive stream errors (any gap over 500ms starts a fresh streak) and, once 20 arrive back-to-back, treats the stream as unrecoverable and calls `std::exit(1)` -- letting systemd's `Restart=on-failure` bring the process back up and run `SelectDevices()` fresh, which picks the device back up automatically if it reappeared under the same name, or keeps retrying every 5s until it does. Before this, a dropped USB audio interface left the process running indefinitely with a silently-dead audio path: the web server and everything else kept working, so nothing outwardly indicated the pedal had gone deaf and mute except a warning buried in the journal. See codefix.md Round 9 #1.
 
+### 11. pedals/clouds_pedal.h (NEW) -- "Sky Chive" granular texture effect
+
+A new pedal, `SkyChivePedal`, wrapping `clouds::GranularProcessor` -- the DSP core of Mutable Instruments' open-source Clouds Eurorack module firmware (`pichenettes/eurorack`, MIT license), vendored as new git submodules `eurorack/` and `eurorack/stmlib/`. Only the hardware-independent `clouds/dsp/` tree is used; `eurorack`'s STM32-specific drivers and UI code are not part of the build. Named "Sky Chive" rather than "Clouds" per Mutable Instruments' own stated preference that derivative works not use their names -- see `docs/THIRD_PARTY.md` for full MIT attribution.
+
+Two things this pedal needed that no other pedal does:
+
+- **Sample-rate bridging:** `clouds::GranularProcessor` runs its DSP at a fixed internal 32kHz (inlined as a literal in multiple places upstream, with no single override point), while this pipeline runs at whatever rate the audio device negotiates. A small linear-interpolation resampler (`SkyChivePedal::LinearResampler`) converts in both directions at the pedal's own boundary.
+- **A background thread for `Prepare()`:** matching upstream's own execution model (an audio ISR calling `Process()`, a separate main loop calling `Prepare()` to do buffer maintenance), a dedicated `std::thread` calls `Prepare()` on a ~15ms cadence while the audio thread (via `Transform()`) calls `Process()`. Every access to the shared `GranularProcessor` instance from either thread is guarded by a `std::mutex` -- see codefix.md Round 12 #3 for why that mutex is required on real (multi-core, weak-memory-model) hardware even though upstream's own Process()/Prepare() split doesn't use one.
+
+Build integration: `Makefile`'s `CLOUDS_SRC` compiles the needed `clouds/dsp/*.cc`/`stmlib/*.cc` files directly (same pattern as `RTAUDIO_SRC`), with `-I eurorack -D TEST` added to `COMPILE_FLAGS` (`-D TEST` is the same macro upstream's own desktop test build uses to strip an STM32-only code path).
+
+### 12. PedalKnob min/max/labels + fader/LED control surface
+
+**`pedal.h`:** `PedalKnob` gained `min`/`max` (default 0.0/1.0) and an optional `labels` list, serialized by `web/serializers.h`'s `SerializePedalKnob` (`labels` omitted from the JSON entirely when empty). Every pedal's `Describe()` now declares its knobs' real ranges -- previously only `tweak_amount` (a step size) existed, with no range at all. A knob with non-empty `labels` is rendered as a row of LED pushbuttons (its position count) instead of a fader; this covers both booleans (Sky Chive's `freeze`: `labels = {"OFF","ON"}`) and short enums (Sky Chive's `mode`: `labels = {"GRAN","STR","LOOP","SPEC"}`) with the same mechanism. `preset_store.h` is unchanged -- min/max/labels are intrinsic to a knob's type, not saved state, so a reloaded preset gets them fresh from the pedal's own `Describe()`, the same way `tweak_amount` already worked.
+
+**`web/static/app.jsx`, `web/static/style.css`:** the old `Knob` component (a `+`/`-`/text-box stepper) is replaced by `Fader` (a draggable vertical fader; position against tick marks is the only readout -- no color fill, matching real hardware sliders) and `LedButtonGroup` (for any knob with `labels`). `ActivePedal`'s card is now a walnut-panel control surface -- wood-grain side cheeks, cream face, a footswitch-style power LED, small remove button -- replacing the plain white Bootstrap card. Scope stops at the card boundary: the preset bar, splash screen, available-pedals list, and page background are unchanged, still the dark Bootstrap "Darkly" theme.
+
 ## Data Flow
 
 ### Web UI Control (adding/adjusting/removing a pedal)
@@ -282,6 +303,11 @@ User taps "Save here" on a preset tile (optionally entering a new name)
 The following are identical to the upstream GuitarEffects repository:
 
 - `pedal_registry.h`, `signal_type.h` — pedal registry and signal type
-- All 15+ existing pedal implementations in `pedals/`
 - Submodules: RtAudio, Crow, cycfi::q, AudioFile, matplotlib-cpp
 - The core audio callback and signal processing pipeline
+
+The upstream pedal implementations in `pedals/` are no longer byte-identical
+to GuitarEffects -- every `Describe()` now declares `min`/`max` (and, for a
+few, `labels`) per Component 12 above, though none of their `AdjustKnob()`
+value-handling logic changed. `pedals/clouds_pedal.h` ("Sky Chive",
+Component 11 above) is new, not from upstream at all.

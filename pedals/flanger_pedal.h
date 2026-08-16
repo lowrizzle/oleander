@@ -41,17 +41,34 @@ public:
     info.name = "Flanger";
 
     info.knobs = {
-        PedalKnob{
-            .name = "seconds", .value = delay_seconds_, .tweak_amount = 0.1},
-        PedalKnob{
-            .name = "delay_blend", .value = delay_blend_, .tweak_amount = 0.1},
-        PedalKnob{.name = "rate", .value = rate_, .tweak_amount = 0.5},
+        PedalKnob{.name = "seconds",
+                  .value = delay_seconds_,
+                  .tweak_amount = 0.1,
+                  .min = 0.001,
+                  .max = 10},
+        PedalKnob{.name = "delay_blend",
+                  .value = delay_blend_,
+                  .tweak_amount = 0.1,
+                  .min = 0,
+                  .max = 1},
+        PedalKnob{.name = "rate",
+                  .value = rate_,
+                  .tweak_amount = 0.5,
+                  .min = 0.1,
+                  .max = 20},
+        // Outer bounds only -- delay_start/delay_end are mutually coupled
+        // (start clamps to <= end, end clamps to >= start) in AdjustKnob()
+        // below, unchanged; the fader just can't reach past 10s either way.
         PedalKnob{.name = "delay_start_seconds",
                   .value = delay_start_seconds_,
-                  .tweak_amount = 0.001},
+                  .tweak_amount = 0.001,
+                  .min = 0.0001,
+                  .max = 10},
         PedalKnob{.name = "delay_end_seconds",
                   .value = delay_end_seconds_,
-                  .tweak_amount = 0.001},
+                  .tweak_amount = 0.001,
+                  .min = 0.0001,
+                  .max = 10},
     };
 
     return info;

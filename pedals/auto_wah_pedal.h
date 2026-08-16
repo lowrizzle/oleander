@@ -41,26 +41,36 @@ public:
             .name = "max_frequency_hz",
             .value = max_frequency_,
             .tweak_amount = 100,
+            .min = 200,
+            .max = 8000,
         },
         PedalKnob{
             .name = "min_frequency_hz",
             .value = min_frequency_,
             .tweak_amount = 100,
+            .min = 20,
+            .max = 2000,
         },
         PedalKnob{
             .name = "responsiveness",
             .value = responsiveness_,
             .tweak_amount = 0.1,
+            .min = 0.1,
+            .max = 10,
         },
         PedalKnob{
             .name = "q",
             .value = q_,
             .tweak_amount = 0.1,
+            .min = 0.1,
+            .max = 10,
         },
         PedalKnob{
             .name = "filter_mix",
             .value = filter_mix_,
             .tweak_amount = 0.1,
+            .min = 0,
+            .max = 1,
         },
     };
     return info;

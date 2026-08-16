@@ -24,13 +24,19 @@ class WaveShaperPedal : public Pedal {
     info.knobs = {
         PedalKnob{.name = "curve_points",
                   .value = static_cast<double>(curve_points_),
-                  .tweak_amount = 100},
+                  .tweak_amount = 100,
+                  .min = 256,
+                  .max = 8192},
         PedalKnob{.name = "amplitude_multiplier",
                   .value = amplitude_multiplier_,
-                  .tweak_amount = 0.1},
+                  .tweak_amount = 0.1,
+                  .min = 0,
+                  .max = 3},
         PedalKnob{.name = "period_multiplier",
                   .value = period_multiplier_,
-                  .tweak_amount = 0.1},
+                  .tweak_amount = 0.1,
+                  .min = 0.1,
+                  .max = 5},
     };
     return info;
   }

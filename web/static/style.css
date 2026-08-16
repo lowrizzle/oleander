@@ -143,101 +143,256 @@
   margin-top: 20px;
 }
 
-/* Active pedal card */
-.active-pedal-card {
-  border: 2px solid #dee2e6;
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 12px;
-  background: #ffffff;
+/* Active pedal card -- vintage-synth walnut control panel: cream/putty
+   face, wood-grain side cheeks, dark fader caps with a white index line,
+   warm amber LEDs. No color fill on faders -- cap position against the
+   tick marks is the readout, matching real hardware; color is reserved
+   for state (the power LED, the LED pushbuttons), not continuous value. */
+.active-pedal-card.walnut {
+  --w-panel-1: #e6ddc6;
+  --w-panel-2: #d9cfb4;
+  --w-wood-1: #6b4226;
+  --w-wood-2: #4a2c17;
+  --w-slot: #cabf9f;
+  --w-ink: #3a2f22;
+  --w-ink-dim: #7a6b52;
+  --w-cap: #2a2622;
+  --w-cap-line: #efe9d8;
+  --w-led-off: #4a2313;
+  --w-led-on: #e08a2c;
+  --w-tick: #a89876;
+
+  background: linear-gradient(180deg, var(--w-panel-1), var(--w-panel-2));
+  border-radius: 3px;
+  padding: 18px 26px 16px;
+  margin: 8px 18px 12px;
+  position: relative;
+  box-shadow: 0 8px 22px rgba(0,0,0,0.35);
 }
 
-.pedal-header {
+.active-pedal-card.walnut::before,
+.active-pedal-card.walnut::after {
+  content: "";
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  width: 22px;
+  background:
+    repeating-linear-gradient(180deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 5px),
+    linear-gradient(90deg, var(--w-wood-1), var(--w-wood-2));
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.4);
+  border-radius: 3px;
+}
+
+.active-pedal-card.walnut::before { left: -14px; }
+.active-pedal-card.walnut::after { right: -14px; }
+
+.brand-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
+  align-items: baseline;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(58,47,34,0.2);
 }
 
-.pedal-name {
-  font-size: 1.1rem;
-  font-weight: 600;
+.brand-row h5 {
   margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--w-ink);
 }
 
-.pedal-index {
-  font-size: 0.85rem;
-  color: #6c757d;
+.brand-row span {
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: var(--w-ink-dim);
 }
 
-/* Knobs */
-.pedal-knobs {
-  margin-bottom: 12px;
+/* Controls grid -- holds up from 0 knobs (Sawtooth) to 6+ (AutoWah) */
+.controls-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
-.knob {
+.control {
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 6px;
-  margin-bottom: 6px;
+  user-select: none;
 }
 
-.knob-label {
-  min-width: 80px;
-  font-size: 0.85rem;
-  color: #495057;
-}
-
-.knob-btn {
-  padding: 2px 8px;
-  font-size: 0.8rem;
-}
-
-.knob-input {
-  width: 70px;
-  text-align: right;
-  font-size: 0.85rem;
-  padding: 2px 6px;
-  border: 1px solid #ced4da;
-  border-radius: 4px;
-}
-
-/* Switch button */
-.pedal-switch {
+.ctl-label {
+  font-size: 0.62rem;
   font-weight: 700;
-  font-size: 1rem;
-  padding: 8px 24px;
-  border-radius: 6px;
-  letter-spacing: 1px;
-  min-width: 80px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--w-ink-dim);
+  text-align: center;
 }
 
-.pedal-switch.btn-success {
-  background-color: #28a745;
-  border-color: #28a745;
-  color: white;
+.ctl-value {
+  font-family: "SF Mono", "Roboto Mono", "Consolas", monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.68rem;
+  color: var(--w-ink);
+  min-height: 1.1em;
 }
 
-.pedal-switch.btn-success:hover {
-  background-color: #218838;
-  border-color: #1e7e34;
+/* Fader -- vertical, no color fill; position against the ticks is the
+   readout. */
+.fader {
+  width: 36px;
+  height: 96px;
+  position: relative;
+  cursor: ns-resize;
+  touch-action: none;
+  display: flex;
+  justify-content: center;
 }
 
-.pedal-switch.btn-secondary {
-  background-color: #6c757d;
-  border-color: #6c757d;
-  color: white;
+.fader-slot {
+  width: 7px;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--w-slot);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.35);
 }
 
-.pedal-switch.btn-secondary:hover {
-  background-color: #5a6268;
-  border-color: #545b62;
+.fader-ticks {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 50%;
+  width: 18px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
 }
 
-/* Pedal actions row */
+.fader-ticks div {
+  width: 100%;
+  height: 1px;
+  background: var(--w-tick);
+  opacity: 0.7;
+}
+
+.fader-ticks .mid { opacity: 1; }
+
+.fader-cap {
+  position: absolute;
+  left: 50%;
+  width: 28px;
+  height: 12px;
+  transform: translate(-50%, 50%);
+  border-radius: 2px;
+  background: linear-gradient(180deg, #3a342c, var(--w-cap));
+  box-shadow: 0 2px 4px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.fader-cap::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  top: 50%;
+  height: 2px;
+  background: var(--w-cap-line);
+  transform: translateY(-50%);
+}
+
+/* LED pushbutton -- used for discrete/enum knobs (freeze, mode) and the
+   card's own power switch. Color/light is reserved for state, never for
+   a continuous value. */
+.ledbtn-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 96px;
+}
+
+.modebtns {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ledbtn {
+  min-width: 30px;
+  padding: 3px 6px;
+  border-radius: 2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: linear-gradient(180deg, #37312a, #221e19);
+  box-shadow: 0 2px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #a89876;
+}
+
+.ledbtn .txt { order: -1; }
+
+.led-jewel {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--w-led-off);
+  transition: background 0.1s ease, box-shadow 0.1s ease;
+}
+
+.ledbtn[data-on="true"] {
+  color: #efe9d8;
+}
+
+.ledbtn[data-on="true"] .led-jewel {
+  background: var(--w-led-on);
+  box-shadow: 0 0 6px 1px var(--w-led-on);
+}
+
+/* Pedal actions row: power switch + remove, styled to sit on the panel
+   rather than as plain web buttons. */
 .pedal-actions {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+}
+
+.power-btn {
+  padding: 6px 18px;
+  font-size: 0.7rem;
+}
+
+.power-btn .txt { order: 0; }
+
+.remove-btn {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--w-ink-dim);
+  font-size: 1rem;
+  line-height: 1;
+  background: rgba(58,47,34,0.08);
+}
+
+.remove-btn:hover {
+  background: rgba(58,47,34,0.16);
+  color: var(--w-ink);
 }
 
 /* Pedal row layout */
@@ -256,19 +411,17 @@
     font-size: 1.8rem;
   }
 
-  .pedal-switch {
-    font-size: 0.85rem;
-    padding: 6px 16px;
-    min-width: 60px;
+  .power-btn {
+    font-size: 0.6rem;
+    padding: 5px 12px;
   }
 
-  .knob-label {
-    min-width: 60px;
-    font-size: 0.8rem;
+  .fader {
+    height: 76px;
   }
 
-  .knob-input {
-    width: 60px;
+  .ledbtn-row {
+    height: 76px;
   }
 
   .preset-tile {
