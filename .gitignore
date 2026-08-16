@@ -7,3 +7,6 @@ web/devices.txt
 devices.txt
 *.pyc
 __pycache__/
+
+# Local-only planning doc -- deliberately not pushed to GitHub.
+docs/ROADMAP.md
