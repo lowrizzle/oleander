@@ -4,3 +4,6 @@ a.out
 bin/
 curves/
 web/devices.txt
+devices.txt
+*.pyc
+__pycache__/

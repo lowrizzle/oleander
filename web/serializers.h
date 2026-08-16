@@ -14,6 +14,10 @@ crow::json::wvalue SerializePedalKnob(const PedalKnob& pedal_knob) {
 
 crow::json::wvalue SerializePedalInfo(const PedalInfo& pedal_info) {
   crow::json::wvalue serialized;
+  // Stable id -- always address this pedal by `id` in follow-up requests
+  // (adjust/remove/push), not by its position in the returned list, since
+  // that position shifts whenever any pedal is added or removed.
+  serialized["id"] = pedal_info.id;
   serialized["name"] = pedal_info.name;
   serialized["state"] = pedal_info.state;
 

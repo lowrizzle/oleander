@@ -6,26 +6,28 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <script src="https://code.jquery.com/jquery-3.2.1.min.js"></script>
-    <!--link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous"-->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@4.5.2/dist/darkly/bootstrap.min.css" integrity="sha384-nNK9n28pDUDDgIiIqZ/MiyO3F4/9vsMtReZK39klb/MtkZI3/LtjSjlmyVPS3KdN" crossorigin="anonymous">
-    <link rel="stylesheet" href="/style.css" crossorigin="anonymous">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
+    <!--
+      These used to load from public CDNs. Oleander runs headless on the
+      local network via mDNS (oleander.local); that network commonly has
+      no internet uplink at all (a venue/rehearsal Wi-Fi, for instance),
+      in which case every CDN request would fail and this page would never
+      render. They're now vendored locally into web/static/ instead --
+      see setup/vendor_assets.sh (run automatically by setup/install.sh).
+    -->
+    <script src="/vendor-jquery.min.js"></script>
+    <link rel="stylesheet" href="/vendor-bootstrap-darkly.min.css">
+    <link rel="stylesheet" href="/style.css">
+    <script src="/vendor-tether.min.js"></script>
+    <script src="/vendor-bootstrap.min.js"></script>
 
-    <title>Pedal Board</title>
-    <script src="https://unpkg.com/react@16.0.0/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@16.0.0/umd/react-dom.production.min.js" charset="utf-8"></script>
-    <script src="https://unpkg.com/babel-standalone@6.26.0/babel.min.js"></script>
+    <title>Oleander - Multi-Effects Pedal</title>
+    <script src="/vendor-react.min.js"></script>
+    <script src="/vendor-react-dom.min.js" charset="utf-8"></script>
+    <script src="/vendor-babel-standalone.min.js"></script>
     <script src="/app.jsx?dontcache=m" type="text/babel"></script>
   </head>
 
   <body>
-    <h1 class="display-1 text-center">
-      Pedal Board
-    </h1>
-    <hr />
-
     <div class="container-fluid">
       <div id="pedalboard">
       </div>

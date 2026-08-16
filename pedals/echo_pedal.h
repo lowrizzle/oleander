@@ -1,7 +1,6 @@
 #ifndef ECHO_PEDAL_H
 #define ECHO_PEDAL_H
 
-#include <iostream>
 #include <vector>
 
 #include "pedal.h"
@@ -16,9 +15,9 @@
 class EchoPedal : public Pedal {
  public:
   EchoPedal(double echo_seconds, double decay_factor)
-      : echo_seconds_(echo_seconds),
+      : echo_seconds_(std::max(0.001, std::min(echo_seconds, 10.0))),
         decay_factor_(decay_factor),
-        echo_buffer_(44100 * echo_seconds_, 0) {}
+        echo_buffer_(static_cast<size_t>(44100 * echo_seconds_), 0) {}
 
   SignalType Transform(SignalType signal) override {
     echo_buffer_[echo_index_] =
@@ -43,13 +42,14 @@ class EchoPedal : public Pedal {
 
   void AdjustKnob(const PedalKnob& pedal_knob) override {
     if (pedal_knob.name == "echo_seconds") {
-      echo_seconds_ = pedal_knob.value;
+      echo_seconds_ = std::max(0.001, std::min(pedal_knob.value, 10.0));
     } else if (pedal_knob.name == "decay_factor") {
       decay_factor_ = pedal_knob.value;
     }
 
     echo_index_ = 0;
-    echo_buffer_ = std::vector<SignalType>(44100 * echo_seconds_, 0);
+    echo_buffer_ = std::vector<SignalType>(
+        static_cast<size_t>(44100 * echo_seconds_), 0);
   }
 
  private:

@@ -23,6 +23,9 @@ class Playback {
   }
 
   SignalType next() {
+    if (frames_.empty()) {
+      return SignalType(0);
+    }
     auto signal = frames_[next_frame_];
     next_frame_ = (next_frame_ + 1) % frames_.size();
     return signal;

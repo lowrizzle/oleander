@@ -5,8 +5,7 @@
 #include "pedal_registry.h"
 #include "signal_type.h"
 
-#include <iostream>
-#include <vector>
+#include <cmath>
 
 // A pedal which produces a saw tooth like wave form.
 //

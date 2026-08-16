@@ -28,6 +28,9 @@ public:
       loop_buffer_.push_back(signal);
       return signal;
     case Mode::REPLAY:
+      if (loop_buffer_.empty()) {
+        return signal;
+      }
       SignalType output = signal + (loop_buffer_[loop_position_] * loop_blend_);
       loop_position_ = (loop_position_ + 1) % loop_buffer_.size();
       return output;

@@ -17,7 +17,7 @@ class FuzzPedal : public Pedal {
  public:
   SignalType Transform(SignalType signal) override {
     signal = shaper_(signal);
-    signal = bandpass_(signal * frequency_multipler_);
+    signal = bandpass_(signal * frequency_multiplier_);
     return signal;
   }
 
@@ -26,8 +26,8 @@ class FuzzPedal : public Pedal {
     info.name = "Fuzz";
     info.knobs = {
         PedalKnob{.name = "boost", .value = boost_, .tweak_amount = 0.1},
-        PedalKnob{.name = "frequency_multipler",
-                  .value = frequency_multipler_,
+        PedalKnob{.name = "frequency_multiplier",
+                  .value = frequency_multiplier_,
                   .tweak_amount = 0.1},
     };
     return info;
@@ -36,8 +36,8 @@ class FuzzPedal : public Pedal {
   void AdjustKnob(const PedalKnob& pedal_knob) override {
     if (pedal_knob.name == "boost") {
       boost_ = pedal_knob.value;
-    } else if (pedal_knob.name == "frequency_multipler") {
-      frequency_multipler_ = pedal_knob.value;
+    } else if (pedal_knob.name == "frequency_multiplier") {
+      frequency_multiplier_ = pedal_knob.value;
     }
 
     shaper_ = {[this](SignalType x) { return Curve(x); }, 4096};
@@ -51,7 +51,7 @@ class FuzzPedal : public Pedal {
   }
 
   double boost_ = 0.7;
-  double frequency_multipler_ = 2;
+  double frequency_multiplier_ = 2;
 
   cycfi::q::bandpass_csg bandpass_{1200, 44100};
   WaveShaper shaper_{[this](SignalType x) { return Curve(x); }, 4096};

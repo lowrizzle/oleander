@@ -17,8 +17,8 @@ class PedalRegistry {
 
   // Get the singleton PedalRegistry instance.
   static PedalRegistry& GetInstance() {
-    static auto* instance = new PedalRegistry();
-    return *instance;
+    static PedalRegistry instance;
+    return instance;
   }
 
   // Add a new pedal to the registry. This should only be accessed via the

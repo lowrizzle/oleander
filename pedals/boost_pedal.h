@@ -6,9 +6,15 @@
 #include "signal_type.h"
 
 // A pedal which "boosts" the input signal by a given factor.
+// Output is clipped to [-1, 1] to prevent DAC clipping artifacts.
 class BoostPedal : public Pedal {
 public:
-  SignalType Transform(SignalType signal) override { return signal * boost_; }
+  SignalType Transform(SignalType signal) override {
+    SignalType boosted = signal * boost_;
+    if (boosted > 1) return 1;
+    if (boosted < -1) return -1;
+    return boosted;
+  }
 
   PedalInfo Describe() override {
     PedalInfo info;

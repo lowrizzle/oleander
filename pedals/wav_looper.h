@@ -12,20 +12,29 @@ class WavLooper : public Pedal {
   // The provided directory is where the pedal will look for files to load.
   WavLooper(const std::string& directory)
       : file_paths_(GetAllFiles(directory)) {
-    current_file_.load(file_paths_[current_file_index_]);
+    if (!file_paths_.empty()) {
+      current_file_.load(file_paths_[current_file_index_]);
+    }
   }
 
   SignalType Transform(SignalType input) override {
+    if (file_paths_.empty() || !current_file_.samples.size()) {
+      return input;
+    }
+
     // Blend the input and the wav file frame together.
     auto output = input + (wav_blend_ *
                            current_file_.samples[channel_index_][frame_index_]);
 
     // TODO: This will only work with 2 channel wav file input.
     channel_index_++;
-    if (channel_index_ >= current_file_.getNumChannels()) {
+    if (channel_index_ >= static_cast<int>(current_file_.samples.size())) {
       channel_index_ = 0;
-      frame_index_ =
-          (frame_index_ + 1) % current_file_.getNumSamplesPerChannel();
+      if (current_file_.samples.size() > 0 &&
+          current_file_.samples[0].size() > 0) {
+        frame_index_ =
+            (frame_index_ + 1) % static_cast<int>(current_file_.samples[0].size());
+      }
     }
     return output;
   }
@@ -48,10 +57,13 @@ class WavLooper : public Pedal {
   void AdjustKnob(const PedalKnob& pedal_knob) override {
     if (pedal_knob.name == "file") {
       current_file_index_ = static_cast<int>(pedal_knob.value);
+      if (file_paths_.empty()) {
+        return;
+      }
       // Ensure that we don't go negative and that we loop around when we
       // surpass the number of files.
       current_file_index_ =
-          std::max(current_file_index_, 0) % file_paths_.size();
+          std::max(current_file_index_, 0) % static_cast<int>(file_paths_.size());
       current_file_.load(file_paths_[current_file_index_]);
     } else if (pedal_knob.name == "wav_blend") {
       wav_blend_ = pedal_knob.value;
@@ -59,11 +71,11 @@ class WavLooper : public Pedal {
   }
 
  private:
-  // TODO: Is there a more graceful way to handle failures than just asserting
-  // here?
   std::vector<std::string> GetAllFiles(const std::string& directory_path) {
     DIR* directory = opendir(directory_path.c_str());
-    assert(directory != nullptr);
+    if (directory == nullptr) {
+      return {};
+    }
 
     std::vector<std::string> files;
     struct dirent* entity;
@@ -74,9 +86,6 @@ class WavLooper : public Pedal {
         files.push_back(std::move(entity_name));
       }
     }
-
-    // The files can't be empty otherwise this will segfault.
-    assert(!files.empty());
 
     closedir(directory);
     return files;

@@ -1,0 +1,40 @@
+[Unit]
+Description=Oleander Hardware Service (GPIO footswitches + OLED display)
+After=network.target oleander.service
+
+[Service]
+Type=simple
+User=__OLEANDER_USER__
+WorkingDirectory=__OLEANDER_DIR__
+# Force gpiozero's modern, gpiochip-based pin factory instead of letting it
+# silently fall through its default chain (lgpio -> RPi.GPIO -> pigpio ->
+# the legacy "Native" factory, which talks to the /sys/class/gpio sysfs
+# interface current Raspberry Pi OS kernels no longer expose). Landing on
+# Native used to fail with a confusing OSError/FileNotFoundError deep in
+# gpiozero's internals; forcing lgpio here means a missing/broken lgpio
+# install now fails immediately and obviously instead. setup/install.sh
+# installs the `lgpio` pip package into the venv for this to work -- see
+# codefix.md Round 4 #2.
+Environment=GPIOZERO_PIN_FACTORY=lgpio
+ExecStart=/opt/oleander-venv/bin/python3 __OLEANDER_DIR__/hardware/hardware_service.py
+Restart=on-failure
+RestartSec=5
+
+# No Environment=PATH/VIRTUAL_ENV lines here: ExecStart above already
+# invokes the venv's python3 by absolute path, and CPython resolves its
+# own site-packages from that interpreter's location (via the venv's
+# pyvenv.cfg) regardless of PATH/VIRTUAL_ENV -- those only matter for
+# tools invoked by bare name via shell lookup, which this unit doesn't
+# do. (A previous version of this file also tried to inherit the
+# caller's PATH via "%{env:PATH}", which isn't valid systemd specifier
+# syntax -- systemd specifiers are a single %-letter, e.g. %h/%u, not
+# %{...} -- so it was being passed through as a literal, useless string
+# rather than actually expanding to anything.)
+
+# Deliberately not Requires=/BindsTo= oleander.service: the hardware
+# service retries its own HTTP/WebSocket connections to the server, so it
+# should keep running (and keep the footswitches responsive) even if the
+# audio/web service is mid-restart, rather than being torn down with it.
+
+[Install]
+WantedBy=multi-user.target

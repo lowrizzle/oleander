@@ -80,7 +80,7 @@ public:
     }
 
     lowpass_ = {max_frequency_, 44100, q_};
-    bandpass_ = {max_frequency_, 44100, q_};
+    bandpass_ = {min_frequency_, 44100, q_};
   }
 
   cycfi::q::lowpass lowpass_{3000, 44100, 1.0};

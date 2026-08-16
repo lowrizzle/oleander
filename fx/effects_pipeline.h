@@ -3,7 +3,7 @@
 
 #include <functional>
 #include <vector>
-#include "signal.h"
+#include "signal_type.h"
 
 // Utility for applying a pipeline of effects to a signal. An "effect" is
 // defined as function which takes a signal and returns a signal.

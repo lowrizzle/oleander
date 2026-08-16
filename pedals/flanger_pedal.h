@@ -5,15 +5,17 @@
 #include "pedal_registry.h"
 #include "signal_type.h"
 
-#include <iostream>
+#include <algorithm>
+#include <cmath>
 #include <vector>
 
 // A pedal which modulates the delay amount using an LFO.
 class FlangerPedal : public Pedal {
 public:
   FlangerPedal(double delay_seconds, double delay_blend)
-      : delay_seconds_(delay_seconds), delay_blend_(delay_blend),
-        delay_buffer_(delay_seconds_ * 44100, 0) {
+      : delay_seconds_(std::max(0.001, std::min(delay_seconds, 10.0))),
+        delay_blend_(delay_blend),
+        delay_buffer_(static_cast<size_t>(delay_seconds_ * 44100), 0) {
 
     slope_ = (delay_end_seconds_ - delay_start_seconds_) / 2;
   }
@@ -22,9 +24,14 @@ public:
     delay_buffer_[delay_index_] = signal;
     delay_index_ = (delay_index_ + 1) % delay_buffer_.size();
     auto read_offset = MapPhaseToOffset() * 44100;
-    int delayed_read = delay_index_ - read_offset;
-    if (delayed_read < 0)
-      delayed_read += delay_buffer_.size();
+    if (delay_buffer_.empty()) {
+      return signal;
+    }
+    size_t buffer_size = delay_buffer_.size();
+    size_t clamped_offset = static_cast<size_t>(
+        std::min(static_cast<double>(buffer_size), std::max(0.0, read_offset)));
+    int delayed_read = static_cast<int>(
+        (delay_index_ - static_cast<int>(clamped_offset) + buffer_size) % buffer_size);
 
     return signal + (delay_buffer_[delayed_read] * delay_blend_);
   }
@@ -57,7 +64,7 @@ public:
 
   // Advance through the LFO curve and return the Y value.
   SignalType GetNextPhase() {
-    auto previous_phase = std::sin(2 * 3.14145 * phase_);
+    auto previous_phase = std::sin(2.0 * M_PI * phase_);
     phase_ += rate_ / 44100.0;
     if (phase_ >= 1)
       phase_ -= 1;
@@ -66,15 +73,16 @@ public:
 
   void AdjustKnob(const PedalKnob& knob) override {
     if (knob.name == "seconds") {
-      delay_seconds_ = knob.value;
+      delay_seconds_ = std::max(0.001, std::min(knob.value, 10.0));
     } else if (knob.name == "delay_blend") {
       delay_blend_ = knob.value;
     } else if (knob.name == "rate") {
       rate_ = knob.value;
     } else if (knob.name == "delay_start_seconds") {
-      delay_start_seconds_ = knob.value;
+      delay_start_seconds_ = std::max(0.0001, std::min(knob.value, delay_end_seconds_));
     } else if (knob.name == "delay_end_seconds") {
-      delay_end_seconds_ = knob.value;
+      delay_end_seconds_ = std::max(
+          delay_start_seconds_ + 0.0001, std::min(knob.value, 10.0));
     }
 
     // Reset the buffer always so that the new settings take effect right away.

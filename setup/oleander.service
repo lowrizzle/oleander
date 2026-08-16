@@ -1,0 +1,24 @@
+[Unit]
+Description=Oleander Multi-Effects Pedal (audio engine + web server)
+After=network.target
+
+[Service]
+Type=simple
+User=__OLEANDER_USER__
+WorkingDirectory=__OLEANDER_DIR__
+# The web server binds port 80 (see web/main.cpp), which the Linux kernel
+# normally reserves for root -- since this unit deliberately does NOT run
+# as root (see setup/install.sh's user-templating, codefix.md Round 3 #3),
+# binding would otherwise fail with EACCES ("Permission denied") the
+# instant the server tries to listen. Granting just this one capability
+# lets the unprivileged __OLEANDER_USER__ process bind low ports without
+# needing to run as root or have the binary itself made setuid -- see
+# codefix.md Round 6 #1.
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+ExecStart=__OLEANDER_DIR__/bin/server
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

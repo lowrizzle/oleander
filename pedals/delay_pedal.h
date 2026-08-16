@@ -5,7 +5,6 @@
 #include "pedal_registry.h"
 #include "signal_type.h"
 
-#include <iostream>
 #include <vector>
 
 // A pedal which produces a "delay" effect. This creates a ring buffer
@@ -15,9 +14,9 @@
 class DelayPedal : public Pedal {
  public:
   DelayPedal(double delay_seconds, double delay_blend)
-      : delay_seconds_(delay_seconds),
+      : delay_seconds_(std::max(0.001, std::min(delay_seconds, 10.0))),
         delay_blend_(delay_blend),
-        delay_buffer_(delay_seconds_ * 44100, 0) {}
+        delay_buffer_(static_cast<size_t>(delay_seconds_ * 44100), 0) {}
 
   SignalType Transform(SignalType signal) override {
     delay_buffer_[delay_index_] = signal;
@@ -40,14 +39,15 @@ class DelayPedal : public Pedal {
 
   void AdjustKnob(const PedalKnob& knob) override {
     if (knob.name == "seconds") {
-      delay_seconds_ = knob.value;
+      delay_seconds_ = std::max(0.001, std::min(knob.value, 10.0));
     } else if (knob.name == "delay_blend") {
       delay_blend_ = knob.value;
     }
 
     // Reset the buffer always so that the new settings take effect right away.
     delay_index_ = 0;
-    delay_buffer_ = std::vector<SignalType>(delay_seconds_ * 44100, 0);
+    delay_buffer_ = std::vector<SignalType>(
+        static_cast<size_t>(delay_seconds_ * 44100), 0);
   }
 
  private:

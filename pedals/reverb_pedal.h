@@ -6,7 +6,6 @@
 #include "pedals/delay_pedal.h"
 #include "signal_type.h"
 
-#include <iostream>
 #include <vector>
 
 // Reverb based on Schroeder's algoritm: 4 parallel delays with slightly
@@ -14,7 +13,8 @@
 class ReverbPedal : public Pedal {
 public:
   ReverbPedal(double delay_seconds, double delay_blend)
-      : delay_seconds_(delay_seconds), delay_blend_(delay_blend) {
+      : delay_seconds_(std::max(0.001, std::min(delay_seconds, 10.0))),
+        delay_blend_(delay_blend) {
     AdjustKnob({});
   }
 
@@ -48,7 +48,7 @@ public:
 
   void AdjustKnob(const PedalKnob& knob) override {
     if (knob.name == "seconds") {
-      delay_seconds_ = knob.value;
+      delay_seconds_ = std::max(0.001, std::min(knob.value, 10.0));
     } else if (knob.name == "delay_blend") {
       delay_blend_ = knob.value;
     } else if (knob.name == "allpass_hz") {
@@ -59,9 +59,11 @@ public:
 
     delays_.clear();
     delays_.emplace_back(delay_seconds_, delay_blend_);
-    delays_.emplace_back(delay_seconds_ - 0.0117, delay_blend_);
+    delays_.emplace_back(
+        std::max(0.001, delay_seconds_ - 0.0117), delay_blend_);
     delays_.emplace_back(delay_seconds_ + 0.01931, delay_blend_);
-    delays_.emplace_back(delay_seconds_ - 0.00797, delay_blend_);
+    delays_.emplace_back(
+        std::max(0.001, delay_seconds_ - 0.00797), delay_blend_);
 
     allpasses_.clear();
     allpasses_.emplace_back(allpass_hz_, 44100, q_);
