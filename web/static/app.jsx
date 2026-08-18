@@ -10,9 +10,8 @@ class AvailablePedal extends React.Component {
 
   render() {
     return (
-      <button class="btn btn-outline-light btn-sm available-pedal-btn"
-              onClick={this.add.bind(this)}>
-        + {this.props.name}
+      <button class="chiclet" onClick={this.add.bind(this)}>
+        <span class="plus">+</span>{this.props.name}
       </button>
     )
   }
@@ -279,25 +278,29 @@ class PedalBoard extends React.Component {
     if (this.state.pedals.length === 0) {
       return (
         <div class="splash-screen">
-          <h1 class="splash-title">OLEANDER</h1>
-          <p class="splash-subtitle">Multi-Effects Pedal</p>
-          <p class="splash-hint">Add pedals below to get started</p>
+          <div class="splash-title">OLEANDER</div>
+          <div class="splash-sub">Multi-Effects Rack</div>
+          <div class="power-strip">
+            <div class="bar lit"></div>
+            <div class="bar lit"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+          </div>
+          <div class="splash-hint">Add pedals below to get started</div>
         </div>
       );
     }
 
     var fullView = this.state.pedals.map((pedal, position) => {
       return (
-          <div className="row pedal-row" key={pedal.id}>
-            <div className="col-md-8 offset-md-2 col-xs-12">
-              <ActivePedal
-                id={pedal.id}
-                name={pedal.name}
-                state={pedal.state}
-                knobs={pedal.knobs}
-                position={position + 1} />
-            </div>
-          </div>
+          <ActivePedal
+            key={pedal.id}
+            id={pedal.id}
+            name={pedal.name}
+            state={pedal.state}
+            knobs={pedal.knobs}
+            position={position + 1} />
       )
     });
 
@@ -336,28 +339,30 @@ class PresetTile extends React.Component {
     const pedalCountLabel = this.props.pedalCount === 1
       ? '1 pedal'
       : this.props.pedalCount + ' pedals';
+    const slotNumber = String(this.props.index + 1).padStart(2, '0');
     // Reflects the physical footswitch's live latch position, independent
     // of whether this preset is the one currently active -- a switch can
     // be latched on while the board has since been freely edited away
     // from it, and this dot should keep tracking the switch either way.
-    const switchDotClass = 'switch-status-dot' +
-      (this.props.switchLatched ? ' switch-status-dot-on' : '');
+    const switchDotClass = 'led-dot latch' + (this.props.switchLatched ? ' on' : '');
     const switchDotTitle = 'Footswitch ' + (this.props.index + 1) +
       (this.props.switchLatched ? ' is latched ON' : ' is latched OFF');
 
     return (
       <div class={tileClass} onClick={this.load.bind(this)}>
-        <div class="preset-slot">
-          {this.props.index + 1}
+        <span class="screw-tl"></span><span class="screw-tr"></span>
+        <span class="screw-bl"></span><span class="screw-br"></span>
+        <div class="preset-top">
+          <span class="preset-slotnum mono">{slotNumber}</span>
           <span class={switchDotClass} title={switchDotTitle}></span>
         </div>
         <div class="preset-name">{this.props.name}</div>
         <div class="preset-count">{pedalCountLabel}</div>
         <button
-          class="btn btn-outline-light btn-sm preset-save-btn"
+          class="preset-save"
           title="Save the current settings into this preset"
           onClick={this.save.bind(this)}>
-          Save here
+          Save Here
         </button>
       </div>
     )
@@ -483,12 +488,17 @@ class App extends React.Component {
   render() {
     return (
       <div class="container-fluid pedalboard-container">
-        <h2 class="app-title">Oleander</h2>
-        <PresetBar updateToken={this.state.updateToken} />
-        <hr />
-        <AvailablePedalList />
-        <hr />
-        <PedalBoard updateToken={this.state.updateToken} />
+        <div class="rack">
+          <div class="nameplate">
+            <h1>OLEANDER</h1>
+            <div class="sub">Multi-Effects Rack</div>
+          </div>
+          <div class="section-label">Presets</div>
+          <PresetBar updateToken={this.state.updateToken} />
+          <div class="section-label">Available Pedals</div>
+          <AvailablePedalList />
+          <PedalBoard updateToken={this.state.updateToken} />
+        </div>
       </div>
     )
   }

@@ -1,146 +1,270 @@
 /* Oleander - Multi-Effects Pedal Styles */
 
+/* Page background set explicitly rather than left to
+   vendor-bootstrap-darkly.min.css's own body color, so the viewport
+   outside the .rack panel doesn't depend on Darkly's palette lining up
+   with this one. */
+html, body {
+  background: #1c1d1e;
+}
+
 /* Container */
 .pedalboard-container {
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 20px 10px;
 }
 
-.app-title {
+.mono {
+  font-family: "SF Mono", "Roboto Mono", "Consolas", monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Graphite rack casing -- frames the walnut pedal cards (see
+   .active-pedal-card.walnut below) the way a real board's metal rails and
+   control surface frame wooden stompboxes, rather than making everything
+   wood. */
+.rack {
+  --g-panel-1: #46484a;
+  --g-panel-2: #2c2e30;
+  --g-bezel: #17181a;
+  --g-ink: #d8d5cd;
+  --g-ink-dim: #8d8a83;
+  --g-active: #4fd67a;
+  --g-latch: #e8a63a;
+
+  background:
+    repeating-linear-gradient(100deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 3px),
+    linear-gradient(160deg, var(--g-panel-1), var(--g-panel-2));
+  border: 8px solid var(--g-bezel);
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05), 0 14px 34px rgba(0,0,0,0.5);
+  padding: 22px 22px 26px;
+}
+
+/* Nameplate (page header + splash-screen title share this treatment) */
+.nameplate {
   text-align: center;
+  margin-bottom: 22px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.nameplate h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.32em;
+  padding-left: 0.32em; /* optically re-center given trailing letter-spacing */
+  color: #efece4;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.08), 0 -1px 1px rgba(0,0,0,0.6);
+}
+
+.nameplate .sub {
+  margin-top: 6px;
+  font-size: 0.68rem;
+  letter-spacing: 0.18em;
+  color: var(--g-ink-dim);
+  text-transform: uppercase;
+}
+
+.section-label {
+  font-size: 0.62rem;
   font-weight: 700;
-  margin-bottom: 15px;
-  /* The page uses Bootswatch's dark "darkly" theme; #212529 (near-black,
-     meant for light backgrounds) was almost unreadable against it outside
-     of the white pedal cards. */
-  color: #f8f9fa;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--g-ink-dim);
+  margin: 0 2px 8px;
 }
 
 /* Available pedals list */
 .available-pedal-list {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   gap: 6px;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
-.available-pedal-btn {
-  margin: 0;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  padding: 4px 10px;
+.chiclet {
+  background: linear-gradient(180deg, #35373a, #222325);
+  border: 1px solid #1a1b1c;
+  border-radius: 3px;
+  padding: 5px 11px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--g-ink-dim);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.chiclet:hover {
+  color: var(--g-ink);
+  border-color: #45474a;
+}
+
+.chiclet .plus {
+  color: var(--g-active);
+  margin-right: 2px;
 }
 
 /* Preset bar */
 .preset-bar {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   gap: 10px;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 .preset-tile {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  width: 120px;
-  padding: 10px 8px;
-  border: 2px solid #495057;
-  border-radius: 8px;
-  background: #2b3035;
+  flex: 1 1 110px;
+  background: linear-gradient(180deg, #38393b, #232426);
+  border: 1px solid #1a1b1c;
+  border-radius: 4px;
+  padding: 10px 10px 8px;
+  position: relative;
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 4px rgba(0,0,0,0.3);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .preset-tile:hover {
-  border-color: #6c757d;
+  border-color: #45474a;
 }
+
+/* Rack-mount corner screws -- purely decorative detail */
+.preset-tile .screw-tl, .preset-tile .screw-tr,
+.preset-tile .screw-bl, .preset-tile .screw-br {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #6a6c6e, #1c1d1e 70%);
+}
+.preset-tile .screw-tl { top: 5px; left: 5px; }
+.preset-tile .screw-tr { top: 5px; right: 5px; }
+.preset-tile .screw-bl { bottom: 5px; left: 5px; }
+.preset-tile .screw-br { bottom: 5px; right: 5px; }
 
 .preset-tile-active {
-  border-color: #28a745;
-  background: #1f3a28;
+  border-color: var(--g-active);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 0 0 1px rgba(79,214,122,0.25), 0 2px 8px rgba(79,214,122,0.15);
 }
 
-.preset-slot {
+.preset-top {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: 0.75rem;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.preset-slotnum {
+  font-size: 0.68rem;
   font-weight: 700;
-  color: #adb5bd;
-  letter-spacing: 1px;
+  color: var(--g-ink-dim);
 }
 
-.preset-tile-active .preset-slot {
-  color: #28a745;
+.preset-tile-active .preset-slotnum {
+  color: var(--g-active);
 }
 
-/* Live latch state of the physical footswitch tied to this preset slot --
-   independent of whether the tile is the currently active preset. Dim
-   grey when latched off, lit amber when latched on. */
-.switch-status-dot {
+/* A knob's/preset's lit state -- reused for both the physical footswitch
+   latch dot (amber) and, generically, any other on/off indicator. */
+.led-dot {
   display: inline-block;
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: #495057;
-  border: 1px solid #6c757d;
+  background: #3a1414;
 }
 
-.switch-status-dot-on {
-  background: #ffc107;
-  border-color: #ffc107;
-  box-shadow: 0 0 4px #ffc107;
+.led-dot.latch.on {
+  background: var(--g-latch);
+  box-shadow: 0 0 5px 1px var(--g-latch);
 }
 
 .preset-name {
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: #f8f9fa;
-  text-align: center;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--g-ink);
+  margin-bottom: 2px;
   word-break: break-word;
 }
 
 .preset-count {
-  font-size: 0.75rem;
-  color: #adb5bd;
+  font-size: 0.66rem;
+  color: var(--g-ink-dim);
+  margin-bottom: 10px;
 }
 
-.preset-save-btn {
-  margin-top: 4px;
-  font-size: 0.7rem;
-  padding: 2px 8px;
+.preset-save {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  text-align: center;
+  background: #1c1d1e;
+  border: 1px solid #313233;
+  border-radius: 3px;
+  color: var(--g-ink-dim);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  padding: 4px 0;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.preset-save:hover {
+  color: var(--g-ink);
+  border-color: #45474a;
 }
 
 /* Splash screen */
 .splash-screen {
   text-align: center;
-  padding: 60px 20px;
+  padding: 46px 20px 40px;
 }
 
 .splash-title {
-  font-size: 2.5rem;
-  font-weight: 700;
-  letter-spacing: 4px;
-  color: #f8f9fa;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  padding-left: 0.3em;
+  color: #efece4;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.08), 0 -1px 1px rgba(0,0,0,0.6);
   margin-bottom: 10px;
 }
 
-.splash-subtitle {
-  font-size: 1.2rem;
-  color: #adb5bd;
-  margin-bottom: 5px;
+.splash-sub {
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--g-ink-dim);
+  margin-bottom: 26px;
+}
+
+.power-strip {
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+}
+
+.power-strip .bar {
+  width: 5px;
+  height: 16px;
+  border-radius: 1px;
+  background: #2c2e30;
+}
+
+.power-strip .bar.lit {
+  background: var(--g-latch);
+  box-shadow: 0 0 6px 1px rgba(232,166,58,0.5);
 }
 
 .splash-hint {
-  font-size: 0.9rem;
-  color: #6c757d;
-  margin-top: 20px;
+  margin-top: 22px;
+  font-size: 0.72rem;
+  color: #5f5d58;
 }
 
 /* Active pedal card -- vintage-synth walnut control panel: cream/putty
@@ -395,18 +519,16 @@
   color: var(--w-ink);
 }
 
-/* Pedal row layout */
-.pedal-row {
-  margin-bottom: 4px;
-}
-
-/* General button styling */
-.btn {
-  border-radius: 4px;
-}
-
 /* Responsive adjustments */
 @media (max-width: 576px) {
+  .rack {
+    padding: 16px 12px 20px;
+  }
+
+  .nameplate h1 {
+    font-size: 1.15rem;
+  }
+
   .splash-title {
     font-size: 1.8rem;
   }
@@ -425,7 +547,7 @@
   }
 
   .preset-tile {
-    width: 90px;
+    flex-basis: 80px;
     padding: 8px 6px;
   }
 
