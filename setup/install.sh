@@ -139,8 +139,11 @@ echo "[5/11] Fetching vendored submodules (RtAudio, eurorack, Crow, ...)..."
 cd "$(dirname "$0")/.."
 if [ -d .git ]; then
   git submodule update --init
-  git submodule update --init eurorack/stmlib
-  git submodule update --init cycfi/infra/external/filesystem
+  # These two are submodules *of* eurorack/cycfi-infra, not of this repo --
+  # `git submodule update --init <nested-path>` from here doesn't see them
+  # as a known pathspec, so it has to run inside the nested repo instead.
+  git -C eurorack submodule update --init stmlib
+  git -C cycfi/infra submodule update --init external/filesystem
 else
   echo "Warning: not a git checkout (no .git directory) -- skipping submodule"
   echo "fetch. If the build below fails with missing headers under rtaudio/"
