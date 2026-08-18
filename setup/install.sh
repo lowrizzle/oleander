@@ -50,7 +50,7 @@ OLEANDER_DIR="$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)"
 echo "Installing Oleander to run as user '$OLEANDER_USER' from $OLEANDER_DIR"
 
 # Update system
-echo "[1/10] Updating system packages..."
+echo "[1/11] Updating system packages..."
 apt update && apt upgrade -y
 
 # Install build dependencies
@@ -68,7 +68,7 @@ apt update && apt upgrade -y
 # -llgpio`) -- it's not meant to be built standalone. Raspberry Pi OS's
 # own apt repo ships a prebuilt, version-matched python3-lgpio (C library
 # included) instead, which is what's actually installed below.
-echo "[2/10] Installing build dependencies..."
+echo "[2/11] Installing build dependencies..."
 apt install -y \
   g++ \
   libasound2-dev \
@@ -98,7 +98,7 @@ apt install -y \
 # a switch GPIO is set up. oleander-hardware.service pins
 # GPIOZERO_PIN_FACTORY=lgpio so this fails loudly instead of silently
 # degrading if it's ever missing.
-echo "[3/10] Installing Python dependencies..."
+echo "[3/11] Installing Python dependencies..."
 # Recreate from scratch rather than reusing whatever's already at this path
 # -- this script may be run more than once while getting things working
 # (as happened here), and a stale venv from an earlier attempt could be
@@ -111,7 +111,7 @@ pip install gpiozero luma.oled pillow requests spidev websocket-client
 deactivate
 
 # Enable I2C (required for SSD1306 OLED display)
-echo "[4/10] Enabling I2C interface..."
+echo "[4/11] Enabling I2C interface..."
 if grep -q "^dtparam=i2c_arm=on" /boot/config.txt 2>/dev/null || \
    grep -q "^dtparam=i2c_arm=on" /boot/firmware/config.txt 2>/dev/null; then
   echo "I2C already enabled"
@@ -120,21 +120,49 @@ else
   echo "I2C enabled. Reboot required."
 fi
 
-# Build the server
-echo "[5/10] Building Oleander server..."
+# Fetch vendored dependencies (RtAudio, eurorack, Crow, cycfi/Q, etc.).
+# These are git submodules, not part of the top-level repo tree -- a plain
+# `git clone` (without --recurse-submodules) leaves their directories empty,
+# which fails the build below with "No such file or directory" on headers
+# like rtaudio/RtAudio.h that very much do exist, just not yet fetched here.
+#
+# Deliberately NOT `--recursive`: cycfi/Q has its own nested submodule,
+# q_io/external/portaudio, pointing at a private git.assembla.com repo that
+# prompts for credentials nobody running this script has -- --recursive
+# hangs the whole install on that prompt. q_io is Q's own live-audio-I/O
+# layer; Oleander doesn't use it (only Q's header-only q_lib DSP library,
+# via -I cycfi/Q/q_lib/include in the Makefile), so it's skipped entirely.
+# Only the nested submodules actually referenced by the build are fetched
+# below: eurorack/stmlib (used directly in the Makefile's build command)
+# and cycfi/infra's own small filesystem-shim dependency.
+echo "[5/11] Fetching vendored submodules (RtAudio, eurorack, Crow, ...)..."
 cd "$(dirname "$0")/.."
+if [ -d .git ]; then
+  git submodule update --init
+  git submodule update --init eurorack/stmlib
+  git submodule update --init cycfi/infra/external/filesystem
+else
+  echo "Warning: not a git checkout (no .git directory) -- skipping submodule"
+  echo "fetch. If the build below fails with missing headers under rtaudio/"
+  echo "or eurorack/, re-clone with 'git clone --recurse-submodules' instead"
+  echo "(then answer 'skip'/interrupt if prompted for git.assembla.com creds"
+  echo "-- see the comment above this block)."
+fi
+
+# Build the server
+echo "[6/11] Building Oleander server..."
 make server
 echo "Build complete: bin/server"
 
 # Download the web UI's third-party JS/CSS so it works with no internet
 # access once deployed (see setup/vendor_assets.sh for why).
-echo "[6/10] Downloading web UI assets for offline use..."
+echo "[7/11] Downloading web UI assets for offline use..."
 bash setup/vendor_assets.sh
 
 # Install systemd services: the audio/web server and the hardware service
 # (GPIO footswitches + OLED) are separate units so each can be restarted
 # independently and neither can accidentally end up running twice.
-echo "[7/10] Installing systemd services (user: $OLEANDER_USER, dir: $OLEANDER_DIR)..."
+echo "[8/11] Installing systemd services (user: $OLEANDER_USER, dir: $OLEANDER_DIR)..."
 sed -e "s|__OLEANDER_USER__|$OLEANDER_USER|g" -e "s|__OLEANDER_DIR__|$OLEANDER_DIR|g" \
   setup/oleander.service > /etc/systemd/system/oleander.service
 sed -e "s|__OLEANDER_USER__|$OLEANDER_USER|g" -e "s|__OLEANDER_DIR__|$OLEANDER_DIR|g" \
@@ -151,13 +179,13 @@ echo "Systemd services installed and enabled"
 usermod -aG gpio,i2c,spi,dialout,audio,video "$OLEANDER_USER" 2>/dev/null || true
 
 # Install Avahi for mDNS (oleander.local)
-echo "[8/10] Configuring mDNS (oleander.local)..."
+echo "[9/11] Configuring mDNS (oleander.local)..."
 systemctl enable avahi-daemon
 systemctl start avahi-daemon
 echo "mDNS enabled"
 
 # Create a user-friendly startup note
-echo "[9/10] Setup complete!"
+echo "[10/11] Setup complete!"
 echo ""
 echo "=========================================="
 echo "  Installation Complete!"
@@ -180,5 +208,5 @@ echo "  SSD1306 OLED: I2C on GPIO 2/3"
 echo "  Switches (presets 1-5): GPIO 21, 20, 16, 12, 6"
 echo "  Audio: USB interface (select on first run)"
 echo ""
-echo "[10/10] Reboot to apply all changes:"
+echo "[11/11] Reboot to apply all changes:"
 echo "  sudo reboot"
