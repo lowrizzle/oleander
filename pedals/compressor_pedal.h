@@ -114,7 +114,7 @@ class CompressorPedal : public Pedal {
   double attack_seconds_;
   double release_seconds_;
   float threshold_ = 0.1;
-  float ratio_ = 0.1;
+  float ratio_ = 0.9;
   float knee_width_db_ = 6;
   float makeup_gain_ = 1.0f;
 

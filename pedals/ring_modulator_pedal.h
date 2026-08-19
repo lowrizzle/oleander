@@ -109,10 +109,11 @@ class RingModulatorPedal : public Pedal {
 
   float carrier_hz_ = 220.0f;
   float character_ = 0.3f;
-  // 0.5 rather than a fully-wet 1.0 default -- at 1.0 this pedal is loud
-  // and overdriven-sounding the moment it's added, before a player has
-  // had a chance to dial anything in.
-  float mix_ = 0.5f;
+  // Well below a fully-wet 1.0 default -- at higher mix this pedal is
+  // loud and overdriven-sounding the moment it's added, before a player
+  // has had a chance to dial anything in. 0.5 was still too hot; 0.3
+  // confirmed reasonable on hardware.
+  float mix_ = 0.3f;
   float phase_ = 0.0f;
 };
 

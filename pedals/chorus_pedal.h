@@ -16,6 +16,25 @@
 // Dimension D. Ported from Mutable Instruments' open-source Plaits
 // firmware -- see docs/ROADMAP.md item 3 and docs/THIRD_PARTY.md.
 //
+// What this algorithm actually does: 3 continuously, independently
+// modulated delay-line taps (each reading the input at a slightly
+// different, constantly drifting delay time) are summed and blended with
+// the dry signal. The drifting delay times Doppler-shift each tap's
+// pitch up and down in a slow, irregular sweep, and because the 3 taps'
+// LFOs are 120 degrees out of phase with each other, they drift apart
+// and back together continuously rather than all moving in lockstep.
+// That's the "shimmering ensemble of voices" character a chorus is going
+// for -- but it's an evolving blend/wash, not 3 discretely distinguishable
+// simultaneous pitches the way a polyphonic pitch-shifter/harmonizer
+// would produce (a genuinely different, unrelated effect). Confirmed via
+// a standalone numeric test (feeding a steady tone through this exact
+// ensemble_.Process() call and comparing output 2 seconds apart) that the
+// filtering is in fact continuously time-varying, not a static/frozen
+// coloration -- at low `amount`, though, the dry signal dominates the mix
+// heavily enough (see dry_amount below) that this modulation can be easy
+// to miss. Defaults below favor `amount`/`depth` high enough to make it
+// unmistakable.
+//
 // This pipeline is mono; Ensemble::Process() is stereo. Duplicates the
 // input into both channels and averages the output back to mono, the
 // same approach the Sky Chive pedal (pedals/clouds_pedal.h) uses for the
@@ -95,7 +114,7 @@ class ChorusPedal : public Pedal {
 
 REGISTER_PEDAL("Chorus", []() {
   return std::unique_ptr<Pedal>(
-      new ChorusPedal(/* amount= */ 0.5, /* depth= */ 0.8));
+      new ChorusPedal(/* amount= */ 0.9, /* depth= */ 1.0));
 });
 
 #endif /* CHORUS_PEDAL_H */
