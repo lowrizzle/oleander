@@ -57,18 +57,58 @@ used by Sky Chive itself.
   Gillet (emilie.o.gillet@gmail.com). Same license text as the Sky Chive
   entry above.
 
-## Chorus and Overdrive pedals (`pedals/chorus_pedal.h`, `pedals/overdrive_pedal.h`)
+## Chorus, Overdrive, Bitcrusher, and LP Gate pedals (`pedals/chorus_pedal.h`, `pedals/overdrive_pedal.h`, `pedals/bitcrusher_pedal.h`, `pedals/low_pass_gate_pedal.h`)
 
-Both are direct ports of effects from Mutable Instruments' open-source
+All four are direct ports of effects from Mutable Instruments' open-source
 **Plaits** Eurorack module firmware.
 
 - Source: [pichenettes/eurorack](https://github.com/pichenettes/eurorack)
   (`plaits/dsp/fx/ensemble.h`, `plaits/dsp/fx/overdrive.h`,
+  `plaits/dsp/fx/sample_rate_reducer.h`, `plaits/dsp/fx/low_pass_gate.h`,
   `plaits/dsp/fx/fx_engine.h`, `plaits/resources.{h,cc}`), vendored here
   as a git submodule at `eurorack/`.
 - License: MIT. Copyright: `Copyright 2014 Emilie Gillet.` Author: Emilie
   Gillet (emilie.o.gillet@gmail.com). Same license text as the Sky Chive
   entry above.
+
+## Pitch Shifter pedal (`pedals/pitch_shifter_pedal.h`)
+
+A 3-voice chord/harmony effect built from 3 independent instances of
+Mutable Instruments' open-source **Clouds** Eurorack module firmware's
+granular pitch shifter (the same project Sky Chive is ported from).
+`clouds::PitchShifter` is a single-voice class -- running 3 of them at
+independently-tunable intervals to get a chord is original composition
+on top of the vendored single-voice engine, not itself a port of any one
+upstream multi-voice feature.
+
+- Source: [pichenettes/eurorack](https://github.com/pichenettes/eurorack)
+  (`clouds/dsp/fx/pitch_shifter.h`, `clouds/dsp/fx/fx_engine.h`),
+  vendored here as a git submodule at `eurorack/`.
+- License: MIT. Copyright: `Copyright 2014 Emilie Gillet.` Author: Emilie
+  Gillet (emilie.o.gillet@gmail.com). Same license text as the Sky Chive
+  entry above.
+
+## Daisy Chains pedal (`pedals/daisy_chains_pedal.h`)
+
+The resonant filter engine is a direct port of Mutable Instruments'
+open-source **Rings** Eurorack module firmware's modal resonator bank
+(`rings::Resonator`) -- not the larger `rings::Part` class, which adds
+polyphony, note/strum triggering, chord tables, and a bundled reverb and
+limiter built for Rings' synth-voice mode; `Resonator` alone is the
+continuous-audio-in/continuous-audio-out piece that fits how every pedal
+in this codebase works. Per the same request from Mutable Instruments
+that derivative works not reuse their module names (the same reasoning
+behind "Sky Chive" for Clouds), this port is named "Daisy Chains"
+everywhere user-facing.
+
+- Source: [pichenettes/eurorack](https://github.com/pichenettes/eurorack)
+  (`rings/dsp/resonator.{h,cc}`, `rings/resources.{h,cc}`, plus its
+  `stmlib` dependency, also by the same author), vendored here as git
+  submodules at `eurorack/` and `eurorack/stmlib/`.
+- License: MIT. Copyright: `Copyright 2015 Emilie Gillet.` (`stmlib`
+  files: `Copyright 2012 Emilie Gillet.`) Author: Emilie Gillet
+  (emilie.o.gillet@gmail.com). Same license text as the Sky Chive entry
+  above.
 
 ## Ring Modulator pedal (`pedals/ring_modulator_pedal.h`)
 
