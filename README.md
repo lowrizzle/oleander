@@ -36,12 +36,14 @@ sudo systemctl start oleander
 
 ## Hardware
 
+![Oleander's finished hardware enclosure](case/hardware_v1.jpg)
+
 - **Compute:** Raspberry Pi 4
 - **Audio:** USB audio interface (Behringer XENYX 302USB)
 - **Display:** SSD1306 128x64 OLED (I2C)
 - **Controls:** 5x latching microswitches on GPIO
 
-See [docs/HARDWARE.md](docs/HARDWARE.md) for wiring diagrams and component details.
+See [docs/HARDWARE.md](docs/HARDWARE.md) for wiring diagrams and component details. 3D-printable enclosure files (`case/oly_bod.stl`, `case/oly_lid.stl`) are in `case/`.
 
 ## Architecture
 
