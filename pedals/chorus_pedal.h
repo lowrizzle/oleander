@@ -33,6 +33,12 @@ class ChorusPedal : public Pedal {
       : amount_(Clamp01(amount)), depth_(Clamp01(depth)) {
     buffer_.resize(kBufferSize);
     ensemble_.Init(buffer_.data());
+    // Init() doesn't clear the underlying FxEngine's write_ptr_ (only
+    // Reset() does) -- without this it's whatever the freshly-allocated
+    // vector's memory happened to contain, which every access still
+    // masks into bounds, but is unnecessary undefined behavior to leave
+    // in place when Reset() is right here for it.
+    ensemble_.Reset();
     ensemble_.set_amount(amount_);
     ensemble_.set_depth(depth_);
   }
@@ -89,7 +95,7 @@ class ChorusPedal : public Pedal {
 
 REGISTER_PEDAL("Chorus", []() {
   return std::unique_ptr<Pedal>(
-      new ChorusPedal(/* amount= */ 0.5, /* depth= */ 0.5));
+      new ChorusPedal(/* amount= */ 0.5, /* depth= */ 0.8));
 });
 
 #endif /* CHORUS_PEDAL_H */
