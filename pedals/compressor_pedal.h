@@ -12,7 +12,9 @@
 #include "q/fx/envelope.hpp"
 #include "signal_type.h"
 
-// Compresses the input signal.
+// Compresses the input signal. Uses cycfi::q's soft_knee_compressor
+// (rather than its plain hard-knee compressor) for a more gradual gain
+// transition around the threshold -- see docs/ROADMAP.md item 3.
 class CompressorPedal : public Pedal {
  public:
   CompressorPedal(double attack_seconds, double release_seconds)
@@ -57,6 +59,11 @@ class CompressorPedal : public Pedal {
                   .tweak_amount = 0.1,
                   .min = 0,
                   .max = 20},
+        PedalKnob{.name = "knee_width",
+                  .value = knee_width_db_,
+                  .tweak_amount = 1,
+                  .min = 0,
+                  .max = 24},
     };
     return info;
   }
@@ -70,11 +77,13 @@ class CompressorPedal : public Pedal {
       threshold_ = pedal_knob.value;
     } else if (pedal_knob.name == "ratio") {
       ratio_ = pedal_knob.value;
+    } else if (pedal_knob.name == "knee_width") {
+      knee_width_db_ = pedal_knob.value;
     }
 
     envelope_tracker_ = {attack_seconds_, release_seconds_,
                          /* sample_rate= */ 44100};
-    compressor_ = {threshold_, ratio_};
+    compressor_ = {threshold_, cycfi::q::decibel(knee_width_db_), ratio_};
   }
 
  private:
@@ -82,8 +91,10 @@ class CompressorPedal : public Pedal {
   double release_seconds_;
   float threshold_ = 0.1;
   float ratio_ = 0.1;
+  float knee_width_db_ = 6;
 
-  cycfi::q::compressor compressor_{threshold_, ratio_};
+  cycfi::q::soft_knee_compressor compressor_{
+      threshold_, cycfi::q::decibel(knee_width_db_), ratio_};
   cycfi::q::envelope_follower envelope_tracker_{attack_seconds_,
                                                 release_seconds_,
                                                 /* sample_rate= */ 44100};

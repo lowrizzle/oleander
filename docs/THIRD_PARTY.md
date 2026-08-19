@@ -42,3 +42,50 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
+
+## Reverb pedal (`pedals/reverb_pedal.h`)
+
+The reverb engine is a direct port of Mutable Instruments' open-source
+**Clouds** Eurorack module firmware (the same project Sky Chive above is
+ported from) -- specifically its Dattorro/Griesinger-topology reverb, not
+used by Sky Chive itself.
+
+- Source: [pichenettes/eurorack](https://github.com/pichenettes/eurorack)
+  (`clouds/dsp/fx/reverb.h`, `clouds/dsp/fx/fx_engine.h`), vendored here
+  as a git submodule at `eurorack/`.
+- License: MIT. Copyright: `Copyright 2014 Emilie Gillet.` Author: Emilie
+  Gillet (emilie.o.gillet@gmail.com). Same license text as the Sky Chive
+  entry above.
+
+## Chorus and Overdrive pedals (`pedals/chorus_pedal.h`, `pedals/overdrive_pedal.h`)
+
+Both are direct ports of effects from Mutable Instruments' open-source
+**Plaits** Eurorack module firmware.
+
+- Source: [pichenettes/eurorack](https://github.com/pichenettes/eurorack)
+  (`plaits/dsp/fx/ensemble.h`, `plaits/dsp/fx/overdrive.h`,
+  `plaits/dsp/fx/fx_engine.h`, `plaits/resources.{h,cc}`), vendored here
+  as a git submodule at `eurorack/`.
+- License: MIT. Copyright: `Copyright 2014 Emilie Gillet.` Author: Emilie
+  Gillet (emilie.o.gillet@gmail.com). Same license text as the Sky Chive
+  entry above.
+
+## Ring Modulator pedal (`pedals/ring_modulator_pedal.h`)
+
+The ring-modulation math (a diode-based analog ring modulator
+approximation) is hand-ported from Mutable Instruments' open-source
+**Warps** Eurorack module firmware -- specifically `Modulator::Diode()`
+and `Modulator::Xmod<ALGORITHM_ANALOG_RING_MODULATION>()`, not the
+surrounding `Modulator` class as a whole (that class expects two audio
+inputs and pulls in an oscillator, quadrature transform, oversampling,
+and a vocoder path this pedal doesn't use -- see the comment in
+`pedals/ring_modulator_pedal.h` for why only the formula, not the class,
+was ported). The carrier oscillator driving it is original code, not
+derived from Warps.
+
+- Source: [pichenettes/eurorack](https://github.com/pichenettes/eurorack)
+  (`warps/dsp/modulator.cc`, `warps/dsp/modulator.h`), vendored here as a
+  git submodule at `eurorack/`.
+- License: MIT. Copyright: `Copyright 2014 Emilie Gillet.` Author: Emilie
+  Gillet (emilie.o.gillet@gmail.com). Same license text as the Sky Chive
+  entry above.

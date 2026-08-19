@@ -6,6 +6,7 @@
 #include "pedals/auto_wah_pedal.h"
 #include "pedals/bandpass_pedal.h"
 #include "pedals/boost_pedal.h"
+#include "pedals/chorus_pedal.h"
 #include "pedals/clouds_pedal.h"
 #include "pedals/compressor_pedal.h"
 #include "pedals/delay_pedal.h"
@@ -15,11 +16,11 @@
 #include "pedals/fuzz_pedal.h"
 #include "pedals/looper_pedal.h"
 #include "pedals/lowpass_pedal.h"
+#include "pedals/overdrive_pedal.h"
 #include "pedals/reverb_pedal.h"
 #include "pedals/reverse_delay_pedal.h"
+#include "pedals/ring_modulator_pedal.h"
 #include "pedals/sawtooth.h"
-#include "pedals/sigmoid_pedal.h"
-#include "pedals/tanh_pedal.h"
 #include "pedals/wav_looper.h"
 
 #endif /* ALL_PEDALS_H */

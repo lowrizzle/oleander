@@ -1,0 +1,95 @@
+#ifndef CHORUS_PEDAL_H
+#define CHORUS_PEDAL_H
+
+#include "pedal.h"
+#include "pedal_registry.h"
+#include "signal_type.h"
+
+#include "plaits/dsp/fx/ensemble.h"
+
+#include <algorithm>
+#include <vector>
+
+// A 3-tap chorus/ensemble effect with 2x3 LFOs (a slow ~0.75Hz set and a
+// fast ~6.57Hz set, each with 120-degree phase offsets between the 3
+// taps) -- the shimmering, widening effect behind things like the Roland
+// Dimension D. Ported from Mutable Instruments' open-source Plaits
+// firmware -- see docs/ROADMAP.md item 3 and docs/THIRD_PARTY.md.
+//
+// This pipeline is mono; Ensemble::Process() is stereo. Duplicates the
+// input into both channels and averages the output back to mono, the
+// same approach the Sky Chive pedal (pedals/clouds_pedal.h) uses for the
+// same reason.
+//
+// Ensemble's LFO rates are hardcoded (as phase increments per Process()
+// call) assuming roughly Plaits hardware's own 48kHz processing rate;
+// running it at this pipeline's 44.1kHz without resampling (same
+// simplification made in pedals/reverb_pedal.h, for the same class of
+// upstream engine) shifts them ~8% slower than authentic. Negligible for
+// a chorus effect.
+class ChorusPedal : public Pedal {
+ public:
+  ChorusPedal(double amount, double depth)
+      : amount_(Clamp01(amount)), depth_(Clamp01(depth)) {
+    buffer_.resize(kBufferSize);
+    ensemble_.Init(buffer_.data());
+    ensemble_.set_amount(amount_);
+    ensemble_.set_depth(depth_);
+  }
+
+  SignalType Transform(SignalType signal) override {
+    float left = signal;
+    float right = signal;
+    ensemble_.Process(&left, &right, 1);
+    return (left + right) * 0.5f;
+  }
+
+  PedalInfo Describe() override {
+    PedalInfo info;
+    info.name = "Chorus";
+    info.knobs = {
+        PedalKnob{.name = "amount",
+                  .value = amount_,
+                  .tweak_amount = 0.1,
+                  .min = 0,
+                  .max = 1},
+        PedalKnob{.name = "depth",
+                  .value = depth_,
+                  .tweak_amount = 0.1,
+                  .min = 0,
+                  .max = 1},
+    };
+    return info;
+  }
+
+  void AdjustKnob(const PedalKnob& knob) override {
+    if (knob.name == "amount") {
+      amount_ = Clamp01(knob.value);
+      ensemble_.set_amount(amount_);
+    } else if (knob.name == "depth") {
+      depth_ = Clamp01(knob.value);
+      ensemble_.set_depth(depth_);
+    }
+  }
+
+ private:
+  using Engine = plaits::Ensemble::E;
+  static constexpr size_t kBufferSize = 1024;
+
+  static float Clamp01(double v) {
+    return static_cast<float>(std::max(0.0, std::min(v, 1.0)));
+  }
+
+  float amount_;
+  float depth_;
+
+  plaits::Ensemble ensemble_;
+  std::vector<Engine::T> buffer_;
+};
+
+REGISTER_PEDAL("Chorus", []() {
+  return std::unique_ptr<Pedal>(
+      new ChorusPedal(/* amount= */ 0.5, /* depth= */ 0.5));
+});
+
+#endif /* CHORUS_PEDAL_H */

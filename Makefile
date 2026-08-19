@@ -48,6 +48,13 @@ CLOUDS_SRC = eurorack/clouds/dsp/granular_processor.cc \
 						 eurorack/stmlib/dsp/units.cc \
 						 eurorack/stmlib/utils/random.cc
 
+# The Chorus and Overdrive pedals wrap Mutable Instruments' open-source
+# Plaits firmware DSP (eurorack/plaits/dsp/fx/ensemble.h and overdrive.h --
+# see pedals/chorus_pedal.h, pedals/overdrive_pedal.h, and
+# docs/THIRD_PARTY.md). Both are header-only except for the LUT data in
+# resources.cc, same pattern as CLOUDS_SRC above.
+PLAITS_SRC = eurorack/plaits/resources.cc
+
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
 	# GCC complains about some ABI differences in one of the libraries, but it
@@ -78,10 +85,10 @@ makedir:
 all: makedir record server
 
 plot: makedir
-	${COMPILER} plot.cpp ${CLOUDS_SRC} ${COMPILE_FLAGS} ${MATPLOT_FLAGS} -o ./bin/plot
+	${COMPILER} plot.cpp ${CLOUDS_SRC} ${PLAITS_SRC} ${COMPILE_FLAGS} ${MATPLOT_FLAGS} -o ./bin/plot
 
 server: makedir
-	${COMPILER} web/main.cpp ${RTAUDIO_SRC} ${CLOUDS_SRC} ${COMPILE_FLAGS} -o ./bin/server
+	${COMPILER} web/main.cpp ${RTAUDIO_SRC} ${CLOUDS_SRC} ${PLAITS_SRC} ${COMPILE_FLAGS} -o ./bin/server
 
 record: makedir
 	${COMPILER} record.cpp ${RTAUDIO_SRC} ${COMPILE_FLAGS} -o ./bin/record
