@@ -2,7 +2,7 @@
 
 A Raspberry Pi 4-based multi-effects pedal system built for synth players and dawless jammers, forked from [GuitarEffects](https://github.com/Quinny/GuitarEffects).
 
-![Oleander's web control interface, showing the preset bar, available pedals, and the Sky Chive granular effect on a vintage-synth-style fader panel](docs/images/web-ui.jpg)
+![Oleander's finished hardware pedal next to its web control interface, showing the preset bar, available pedals, and the Sky Chive granular effect on a vintage-synth-style fader panel](docs/images/oleander_hw_and_webui.jpg)
 
 ## Features
 
@@ -12,7 +12,7 @@ A Raspberry Pi 4-based multi-effects pedal system built for synth players and da
 - 5 latching microswitches for physical pedal on/off control
 - SSD1306 OLED display showing active pedal name, knob values, and status
 - Headless operation via systemd service
-- USB audio interface support (Behringer XENYX 302USB or similar)
+- Works with any class-compliant USB audio interface (developed and tested on a Behringer XENYX 302USB, but not tied to it)
 - One-click setup script
 
 ## Quick Start
@@ -36,10 +36,10 @@ sudo systemctl start oleander
 
 ## Hardware
 
-![Oleander's finished hardware enclosure](case/hardware_v1.jpg)
+![Oleander's finished hardware enclosure](case/oleander_hw.jpg)
 
 - **Compute:** Raspberry Pi 4
-- **Audio:** USB audio interface (Behringer XENYX 302USB)
+- **Audio:** Any class-compliant USB audio interface (built and tested with a Behringer XENYX 302USB; any USB audio interface Linux/ALSA recognizes should work)
 - **Display:** SSD1306 128x64 OLED (I2C)
 - **Controls:** 5x latching microswitches on GPIO
 
