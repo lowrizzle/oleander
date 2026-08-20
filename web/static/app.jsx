@@ -10,9 +10,8 @@ class AvailablePedal extends React.Component {
 
   render() {
     return (
-      <button class="btn btn-outline-light btn-sm available-pedal-btn"
-              onClick={this.add.bind(this)}>
-        + {this.props.name}
+      <button class="chiclet" onClick={this.add.bind(this)}>
+        <span class="plus">+</span>{this.props.name}
       </button>
     )
   }
@@ -279,25 +278,29 @@ class PedalBoard extends React.Component {
     if (this.state.pedals.length === 0) {
       return (
         <div class="splash-screen">
-          <h1 class="splash-title">OLEANDER</h1>
-          <p class="splash-subtitle">Multi-Effects Pedal</p>
-          <p class="splash-hint">Add pedals below to get started</p>
+          <div class="splash-title">OLEANDER</div>
+          <div class="splash-sub">Multi-Effects Rack</div>
+          <div class="power-strip">
+            <div class="bar lit"></div>
+            <div class="bar lit"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+          </div>
+          <div class="splash-hint">Add pedals below to get started</div>
         </div>
       );
     }
 
     var fullView = this.state.pedals.map((pedal, position) => {
       return (
-          <div className="row pedal-row" key={pedal.id}>
-            <div className="col-md-8 offset-md-2 col-xs-12">
-              <ActivePedal
-                id={pedal.id}
-                name={pedal.name}
-                state={pedal.state}
-                knobs={pedal.knobs}
-                position={position + 1} />
-            </div>
-          </div>
+          <ActivePedal
+            key={pedal.id}
+            id={pedal.id}
+            name={pedal.name}
+            state={pedal.state}
+            knobs={pedal.knobs}
+            position={position + 1} />
       )
     });
 
@@ -310,14 +313,26 @@ class PedalBoard extends React.Component {
 }
 
 // A single preset slot: tap to recall it onto the live board, or save the
-// board's current state into this slot (optionally renaming it).
+// board's current state into this slot (optionally renaming it). While a
+// chain-library entry is "armed" (see ChainLibraryTile/App below), tapping
+// a slot assigns that entry into it instead of recalling -- and any slot
+// always accepts a library entry dropped directly onto it, armed or not.
 class PresetTile extends React.Component {
   constructor(props) {
     super(props);
   }
 
   load() {
+    if (this.props.armedEntry) {
+      this.assign(this.props.armedEntry);
+      return;
+    }
     $.get('/preset/' + this.props.index);
+  }
+
+  assign(name) {
+    $.post('/chain_library/' + encodeURIComponent(name) + '/assign/' + this.props.index)
+      .always(() => this.props.onAssignComplete());
   }
 
   save(event) {
@@ -331,33 +346,52 @@ class PresetTile extends React.Component {
     $.post('/preset/' + this.props.index + '/save?name=' + encodeURIComponent(name));
   }
 
+  onDragOver(event) {
+    event.preventDefault(); // required for onDrop to fire at all
+  }
+
+  onDrop(event) {
+    event.preventDefault();
+    const name = event.dataTransfer.getData('text/plain');
+    if (name) {
+      this.assign(name);
+    }
+  }
+
   render() {
-    const tileClass = 'preset-tile' + (this.props.active ? ' preset-tile-active' : '');
+    const tileClass = 'preset-tile'
+      + (this.props.active ? ' preset-tile-active' : '')
+      + (this.props.armedEntry ? ' preset-tile-armable' : '');
     const pedalCountLabel = this.props.pedalCount === 1
       ? '1 pedal'
       : this.props.pedalCount + ' pedals';
+    const slotNumber = String(this.props.index + 1).padStart(2, '0');
     // Reflects the physical footswitch's live latch position, independent
     // of whether this preset is the one currently active -- a switch can
     // be latched on while the board has since been freely edited away
     // from it, and this dot should keep tracking the switch either way.
-    const switchDotClass = 'switch-status-dot' +
-      (this.props.switchLatched ? ' switch-status-dot-on' : '');
+    const switchDotClass = 'led-dot latch' + (this.props.switchLatched ? ' on' : '');
     const switchDotTitle = 'Footswitch ' + (this.props.index + 1) +
       (this.props.switchLatched ? ' is latched ON' : ' is latched OFF');
 
     return (
-      <div class={tileClass} onClick={this.load.bind(this)}>
-        <div class="preset-slot">
-          {this.props.index + 1}
+      <div class={tileClass}
+           onClick={this.load.bind(this)}
+           onDragOver={this.onDragOver.bind(this)}
+           onDrop={this.onDrop.bind(this)}>
+        <span class="screw-tl"></span><span class="screw-tr"></span>
+        <span class="screw-bl"></span><span class="screw-br"></span>
+        <div class="preset-top">
+          <span class="preset-slotnum mono">{slotNumber}</span>
           <span class={switchDotClass} title={switchDotTitle}></span>
         </div>
         <div class="preset-name">{this.props.name}</div>
         <div class="preset-count">{pedalCountLabel}</div>
         <button
-          class="btn btn-outline-light btn-sm preset-save-btn"
+          class="preset-save"
           title="Save the current settings into this preset"
           onClick={this.save.bind(this)}>
-          Save here
+          Save Here
         </button>
       </div>
     )
@@ -416,11 +450,118 @@ class PresetBar extends React.Component {
         name={preset.name}
         pedalCount={preset.pedal_count}
         active={preset.index === this.state.activeIndex}
-        switchLatched={!!this.state.switchLatched[preset.index]} />
+        switchLatched={!!this.state.switchLatched[preset.index]}
+        armedEntry={this.props.armedEntry}
+        onAssignComplete={this.props.onAssignComplete} />
     ));
 
     return (
       <div class="preset-bar">
+        {tiles}
+      </div>
+    )
+  }
+}
+
+// A single chain-library entry: an unbounded, name-keyed saved chain,
+// independent of the 5 fixed preset slots above (see docs/ROADMAP.md item
+// 2). Click once to "arm" it, then click a preset slot above to assign it
+// there -- or skip the click and drag it directly onto a slot instead.
+class ChainLibraryTile extends React.Component {
+  select() {
+    this.props.onSelect(this.props.name);
+  }
+
+  remove(event) {
+    event.stopPropagation();
+    if (!window.confirm('Delete "' + this.props.name + '" from the chain library?')) {
+      return;
+    }
+    $.post('/chain_library/' + encodeURIComponent(this.props.name) + '/delete');
+  }
+
+  onDragStart(event) {
+    event.dataTransfer.setData('text/plain', this.props.name);
+    event.dataTransfer.effectAllowed = 'copy';
+  }
+
+  render() {
+    const tileClass = 'preset-tile library-tile' + (this.props.armed ? ' library-tile-armed' : '');
+    const pedalCountLabel = this.props.pedalCount === 1
+      ? '1 pedal'
+      : this.props.pedalCount + ' pedals';
+    const title = this.props.armed
+      ? 'Click a preset slot to assign, or click again to cancel'
+      : 'Click to select, then click a preset slot -- or drag onto one';
+
+    return (
+      <div class={tileClass}
+           draggable="true"
+           onDragStart={this.onDragStart.bind(this)}
+           onClick={this.select.bind(this)}
+           title={title}>
+        <span class="screw-tl"></span><span class="screw-tr"></span>
+        <span class="screw-bl"></span><span class="screw-br"></span>
+        <div class="preset-name">{this.props.name}</div>
+        <div class="preset-count">{pedalCountLabel}</div>
+        <button
+          class="preset-save library-delete"
+          title="Delete from library"
+          onClick={this.remove.bind(this)}>
+          Delete
+        </button>
+      </div>
+    )
+  }
+}
+
+// The chain library list: every chain ever saved via a preset slot's "Save
+// Here", independent of which slot (if any) currently holds it. Refreshes
+// on the same `updateToken` mechanism as PresetBar/PedalBoard.
+class ChainLibraryList extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      'entries': [],
+    };
+  }
+
+  componentDidMount() {
+    this.refresh();
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.updateToken !== this.props.updateToken) {
+      this.refresh();
+    }
+  }
+
+  refresh() {
+    $.get('/chain_library').done(response => {
+      this.setState({ 'entries': response.entries });
+    });
+  }
+
+  render() {
+    if (this.state.entries.length === 0) {
+      return (
+        <div class="library-empty">
+          Nothing saved yet -- "Save Here" on a preset above also adds it here.
+        </div>
+      );
+    }
+
+    const tiles = this.state.entries.map(entry => (
+      <ChainLibraryTile
+        key={entry.name}
+        name={entry.name}
+        pedalCount={entry.pedal_count}
+        armed={entry.name === this.props.armedEntry}
+        onSelect={this.props.onSelectEntry} />
+    ));
+
+    return (
+      <div class="preset-bar library-bar">
         {tiles}
       </div>
     )
@@ -432,10 +573,24 @@ class App extends React.Component {
     super(props);
     this.state = {
       'updateToken': 0,
+      // Name of the chain-library entry currently "armed" for click-to-
+      // assign (see ChainLibraryTile/PresetTile), or null if none is.
+      'armedLibraryEntry': null,
     };
     this.socket = null;
     this.reconnectDelayMs = 1000;
     this.reconnectTimer = null;
+  }
+
+  selectLibraryEntry(name) {
+    this.setState(prevState => ({
+      // Clicking the already-armed entry again disarms it.
+      armedLibraryEntry: prevState.armedLibraryEntry === name ? null : name,
+    }));
+  }
+
+  clearArmedLibraryEntry() {
+    this.setState({ armedLibraryEntry: null });
   }
 
   componentDidMount() {
@@ -483,12 +638,25 @@ class App extends React.Component {
   render() {
     return (
       <div class="container-fluid pedalboard-container">
-        <h2 class="app-title">Oleander</h2>
-        <PresetBar updateToken={this.state.updateToken} />
-        <hr />
-        <AvailablePedalList />
-        <hr />
-        <PedalBoard updateToken={this.state.updateToken} />
+        <div class="rack">
+          <div class="nameplate">
+            <h1>OLEANDER</h1>
+            <div class="sub">Multi-Effects Rack</div>
+          </div>
+          <div class="section-label">Presets</div>
+          <PresetBar
+            updateToken={this.state.updateToken}
+            armedEntry={this.state.armedLibraryEntry}
+            onAssignComplete={this.clearArmedLibraryEntry.bind(this)} />
+          <div class="section-label">Chain Library</div>
+          <ChainLibraryList
+            updateToken={this.state.updateToken}
+            armedEntry={this.state.armedLibraryEntry}
+            onSelectEntry={this.selectLibraryEntry.bind(this)} />
+          <div class="section-label">Available Pedals</div>
+          <AvailablePedalList />
+          <PedalBoard updateToken={this.state.updateToken} />
+        </div>
       </div>
     )
   }

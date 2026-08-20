@@ -3,30 +3,52 @@
 
 #include "pedal.h"
 #include "pedal_registry.h"
-#include "pedals/delay_pedal.h"
 #include "signal_type.h"
 
+#include "clouds/dsp/frame.h"
+#include "clouds/dsp/fx/reverb.h"
+
+#include <algorithm>
 #include <vector>
 
-// Reverb based on Schroeder's algoritm: 4 parallel delays with slightly
-// different delay times + 2 series all pass filters.
+// Reverb, using the Dattorro/Griesinger topology (4 allpass diffusers on
+// the input, then a feedback loop of 2x(2 allpass + 1 delay)) from
+// Mutable Instruments' open-source Clouds firmware. Replaces the previous
+// engine here (4 parallel delay lines + 2 series allpasses, no real
+// diffusion network) -- see docs/ROADMAP.md item 3 and
+// docs/THIRD_PARTY.md. Kept registered under the same "Reverb" name so
+// existing presets/chain-library entries referencing it still resolve;
+// only the DSP inside changed.
+//
+// clouds::Reverb::Process() operates on FloatFrame (stereo) blocks of any
+// size, including 1 -- unlike the granular engine behind Sky Chive, it
+// isn't fixed to a specific internal sample rate via lookup-table
+// indices, so no block buffering or resampling is required here. It is,
+// however, tuned (LFO rates in Init(), and the delay-line lengths chosen
+// for a ~32kHz reference) assuming roughly Clouds hardware's own 32kHz
+// processing rate. Running it at this pipeline's 44.1kHz without
+// resampling (consistent with every other pedal in this codebase, none
+// of which thread the real device rate down to construction) makes the
+// shimmer LFOs run somewhat faster and shortens the effective decay
+// versus authentic Clouds hardware -- a cosmetic coloration, not a
+// functional defect.
 class ReverbPedal : public Pedal {
-public:
-  ReverbPedal(double delay_seconds, double delay_blend)
-      : delay_seconds_(std::max(0.001, std::min(delay_seconds, 10.0))),
-        delay_blend_(delay_blend) {
-    AdjustKnob({});
+ public:
+  ReverbPedal(double amount, double time)
+      : amount_(Clamp01(amount)), time_(Clamp01(time)) {
+    buffer_.resize(kBufferSize);
+    reverb_.Init(buffer_.data());
+    reverb_.set_amount(amount_);
+    reverb_.set_input_gain(input_gain_);
+    reverb_.set_time(time_);
+    reverb_.set_diffusion(diffusion_);
+    reverb_.set_lp(damping_);
   }
 
   SignalType Transform(SignalType signal) override {
-    SignalType result = 0;
-    for (auto& delay : delays_) {
-      result += delay.Transform(signal);
-    }
-    for (auto& allpass : allpasses_) {
-      result = allpass(result);
-    }
-    return result;
+    clouds::FloatFrame frame{signal, signal};
+    reverb_.Process(&frame, 1);
+    return (frame.l + frame.r) * 0.5f;
   }
 
   PedalInfo Describe() override {
@@ -34,67 +56,69 @@ public:
     info.name = "Reverb";
 
     info.knobs = {
-        PedalKnob{.name = "seconds",
-                  .value = delay_seconds_,
-                  .tweak_amount = 0.1,
-                  .min = 0.001,
-                  .max = 10},
-        PedalKnob{.name = "delay_blend",
-                  .value = delay_blend_,
+        PedalKnob{.name = "amount",
+                  .value = amount_,
                   .tweak_amount = 0.1,
                   .min = 0,
                   .max = 1},
-        PedalKnob{.name = "allpass_hz",
-                  .value = allpass_hz_,
-                  .tweak_amount = 100,
-                  .min = 20,
-                  .max = 20000},
-        PedalKnob{.name = "q",
-                  .value = q_,
+        PedalKnob{.name = "time",
+                  .value = time_,
+                  .tweak_amount = 0.05,
+                  .min = 0,
+                  .max = 0.95},
+        PedalKnob{.name = "diffusion",
+                  .value = diffusion_,
                   .tweak_amount = 0.1,
-                  .min = 0.1,
-                  .max = 10},
+                  .min = 0,
+                  .max = 1},
+        PedalKnob{.name = "damping",
+                  .value = damping_,
+                  .tweak_amount = 0.1,
+                  .min = 0,
+                  .max = 1},
     };
 
     return info;
   }
 
   void AdjustKnob(const PedalKnob& knob) override {
-    if (knob.name == "seconds") {
-      delay_seconds_ = std::max(0.001, std::min(knob.value, 10.0));
-    } else if (knob.name == "delay_blend") {
-      delay_blend_ = knob.value;
-    } else if (knob.name == "allpass_hz") {
-      allpass_hz_ = knob.value;
-    } else if (knob.name == "q") {
-      q_ = knob.value;
+    if (knob.name == "amount") {
+      amount_ = Clamp01(knob.value);
+      reverb_.set_amount(amount_);
+    } else if (knob.name == "time") {
+      // Kept below 1.0 -- clouds::Reverb's feedback loop is unstable
+      // (unbounded growth) at time >= 1.
+      time_ = static_cast<float>(std::max(0.0, std::min(knob.value, 0.95)));
+      reverb_.set_time(time_);
+    } else if (knob.name == "diffusion") {
+      diffusion_ = Clamp01(knob.value);
+      reverb_.set_diffusion(diffusion_);
+    } else if (knob.name == "damping") {
+      damping_ = Clamp01(knob.value);
+      reverb_.set_lp(damping_);
     }
-
-    delays_.clear();
-    delays_.emplace_back(delay_seconds_, delay_blend_);
-    delays_.emplace_back(
-        std::max(0.001, delay_seconds_ - 0.0117), delay_blend_);
-    delays_.emplace_back(delay_seconds_ + 0.01931, delay_blend_);
-    delays_.emplace_back(
-        std::max(0.001, delay_seconds_ - 0.00797), delay_blend_);
-
-    allpasses_.clear();
-    allpasses_.emplace_back(allpass_hz_, 44100, q_);
-    allpasses_.emplace_back(allpass_hz_, 44100, q_);
   }
 
-private:
-  double delay_seconds_;
-  double delay_blend_;
-  double allpass_hz_ = 1200;
-  double q_ = 0.7;
-  std::vector<DelayPedal> delays_;
-  std::vector<cycfi::q::allpass> allpasses_;
+ private:
+  static constexpr size_t kBufferSize = 16384;
+
+  static float Clamp01(double v) {
+    return static_cast<float>(std::max(0.0, std::min(v, 1.0)));
+  }
+
+  float amount_;
+  float time_;
+  float diffusion_ = 0.625f;
+  float damping_ = 0.7f;
+  const float input_gain_ = 0.5f;
+
+  clouds::Reverb reverb_;
+  std::vector<uint16_t> buffer_;
 };
 
 REGISTER_PEDAL("Reverb", []() {
   return std::unique_ptr<Pedal>(
-      new ReverbPedal(/* delay_seconds =*/0.5, /* delay_blend= */ 0.2));
+      new ReverbPedal(/* amount= */ 0.5, /* time= */ 0.6));
 });
 
 #endif /* REVERB_PEDAL_H */

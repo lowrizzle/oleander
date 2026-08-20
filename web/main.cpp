@@ -249,6 +249,7 @@ int main(int argc, char* argv[]) {
   crow::SimpleApp app;
   PedalBoard pedal_board;
   PresetStore preset_store("presets.json");
+  ChainLibrary chain_library("chain_library.json");
   SwitchStates switch_states;
 
   // Resume with whatever was last dialed in (including a mid-edit, not-yet
@@ -301,13 +302,31 @@ int main(int argc, char* argv[]) {
   LoadPresetHandler load_preset_handler(&pedal_board, &preset_store, notifier);
   CROW_ROUTE(app, "/preset/<int>")(load_preset_handler);
 
-  SavePresetHandler save_preset_handler(&pedal_board, &preset_store, notifier);
+  SavePresetHandler save_preset_handler(&pedal_board, &preset_store,
+                                         &chain_library, notifier);
   CROW_ROUTE(app, "/preset/<int>/save")
       .methods(crow::HTTPMethod::POST)(save_preset_handler);
 
   RenamePresetHandler rename_preset_handler(&preset_store, notifier);
   CROW_ROUTE(app, "/preset/<int>/name")
       .methods(crow::HTTPMethod::POST)(rename_preset_handler);
+
+  // Chain library: unbounded, name-keyed collection of saved chains,
+  // independent of the 5 fixed preset slots above. Populated automatically
+  // by SavePresetHandler (every "Save here" upserts into it) -- there is no
+  // direct save endpoint here. See docs/ROADMAP.md item 2.
+  ChainLibraryListHandler chain_library_list_handler(&chain_library);
+  CROW_ROUTE(app, "/chain_library")(chain_library_list_handler);
+
+  ChainLibraryDeleteHandler chain_library_delete_handler(&chain_library,
+                                                          notifier);
+  CROW_ROUTE(app, "/chain_library/<string>/delete")
+      .methods(crow::HTTPMethod::POST)(chain_library_delete_handler);
+
+  ChainLibraryAssignHandler chain_library_assign_handler(
+      &preset_store, &chain_library, notifier);
+  CROW_ROUTE(app, "/chain_library/<string>/assign/<int>")
+      .methods(crow::HTTPMethod::POST)(chain_library_assign_handler);
 
   // Live latch state of the 5 physical footswitches (separate from, and in
   // addition to, the preset each one recalls) -- backs the on/off

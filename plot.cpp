@@ -28,7 +28,7 @@ int main() {
   pedals.push_back(std::make_unique<FuzzPedal>());
   pedals.push_back(std::make_unique<AutoWahPedal>());
   pedals.push_back(std::make_unique<DistortionPedal>());
-  pedals.push_back(std::make_unique<SigmoidPedal>());
+  pedals.push_back(std::make_unique<OverdrivePedal>());
 
   // Plot the clean signal.
   matplotlibcpp::named_plot("Clean", xs, pb.frames());

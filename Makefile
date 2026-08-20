@@ -48,6 +48,25 @@ CLOUDS_SRC = eurorack/clouds/dsp/granular_processor.cc \
 						 eurorack/stmlib/dsp/units.cc \
 						 eurorack/stmlib/utils/random.cc
 
+# The Chorus, Overdrive, Bitcrusher, and LP Gate pedals wrap Mutable
+# Instruments' open-source Plaits firmware DSP (eurorack/plaits/dsp/fx/
+# ensemble.h, overdrive.h, sample_rate_reducer.h, low_pass_gate.h -- see
+# pedals/chorus_pedal.h, pedals/overdrive_pedal.h,
+# pedals/bitcrusher_pedal.h, pedals/low_pass_gate_pedal.h, and
+# docs/THIRD_PARTY.md). All header-only except for the LUT data in
+# resources.cc, same pattern as CLOUDS_SRC above.
+PLAITS_SRC = eurorack/plaits/resources.cc
+
+# The Daisy Chains pedal wraps Mutable Instruments' open-source Rings
+# firmware DSP (eurorack/rings/dsp/resonator.h -- see
+# pedals/daisy_chains_pedal.h and docs/THIRD_PARTY.md). Unlike the Plaits/
+# Clouds fx headers above, Resonator's implementation lives in a .cc file,
+# not the header -- resources.cc is its LUT data, same pattern as
+# CLOUDS_SRC/PLAITS_SRC. Shared stmlib sources are already linked via
+# CLOUDS_SRC above; not duplicated here.
+RINGS_SRC = eurorack/rings/dsp/resonator.cc \
+						eurorack/rings/resources.cc
+
 UNAME := $(shell uname)
 ifeq ($(UNAME), Linux)
 	# GCC complains about some ABI differences in one of the libraries, but it
@@ -78,10 +97,10 @@ makedir:
 all: makedir record server
 
 plot: makedir
-	${COMPILER} plot.cpp ${CLOUDS_SRC} ${COMPILE_FLAGS} ${MATPLOT_FLAGS} -o ./bin/plot
+	${COMPILER} plot.cpp ${CLOUDS_SRC} ${PLAITS_SRC} ${RINGS_SRC} ${COMPILE_FLAGS} ${MATPLOT_FLAGS} -o ./bin/plot
 
 server: makedir
-	${COMPILER} web/main.cpp ${RTAUDIO_SRC} ${CLOUDS_SRC} ${COMPILE_FLAGS} -o ./bin/server
+	${COMPILER} web/main.cpp ${RTAUDIO_SRC} ${CLOUDS_SRC} ${PLAITS_SRC} ${RINGS_SRC} ${COMPILE_FLAGS} -o ./bin/server
 
 record: makedir
 	${COMPILER} record.cpp ${RTAUDIO_SRC} ${COMPILE_FLAGS} -o ./bin/record

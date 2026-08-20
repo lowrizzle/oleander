@@ -4,6 +4,7 @@
 #include "crow.h"
 #include "pedal_registry.h"
 #include "pedals/all_pedals.h"
+#include "web/chain_library.h"
 #include "web/pedal_board.h"
 #include "web/preset_store.h"
 #include "web/serializers.h"
@@ -138,6 +139,12 @@ public:
   }
 
   void NotifyPresetsChanged() const { updates_->OnUpdate(); }
+
+  // Same signal as NotifyPresetsChanged (both just tell connected clients to
+  // re-fetch) -- kept as a separate name so call sites read as "the chain
+  // library changed" rather than "a preset slot changed", even though the
+  // two currently do the same thing.
+  void NotifyLibraryChanged() const { updates_->OnUpdate(); }
 
 private:
   PedalBoard* pedal_board_;
@@ -354,11 +361,17 @@ private:
 // preset slot n, optionally renaming it. `name` (if present) is read as a
 // URL query parameter, matching the convention already used by
 // /adjust_knob -- e.g. POST /preset/0/save?name=Lead%20Boost.
+//
+// Every save also upserts a same-named entry into the chain library
+// (independent of, and outliving, whichever slot it was saved from) -- see
+// docs/ROADMAP.md item 2. This is the library's only write path; there is
+// deliberately no separate "save to library" endpoint or opt-in step.
 class SavePresetHandler {
 public:
   SavePresetHandler(PedalBoard* pedal_board, PresetStore* presets,
-                     ChangeNotifier notifier)
-      : pedal_board_(pedal_board), presets_(presets), notifier_(notifier) {}
+                     ChainLibrary* library, ChangeNotifier notifier)
+      : pedal_board_(pedal_board), presets_(presets), library_(library),
+        notifier_(notifier) {}
 
   crow::response operator()(const crow::request& request, int index) const {
     if (index < 0 || index >= PresetStore::kNumPresets) {
@@ -375,6 +388,15 @@ public:
     if (!presets_->Save(index, preset)) {
       return crow::response(400);
     }
+
+    // Re-fetch rather than reuse `preset`: if name_param was empty,
+    // PresetStore::Save resolved the name to the slot's existing name
+    // internally (on its own copy), which the local `preset` here never
+    // saw -- this is what the library entry should be upserted under.
+    Preset saved;
+    presets_->Get(index, &saved);
+    library_->Upsert(saved);
+
     notifier_.NotifyPresetsChanged();
     return crow::response(200);
   }
@@ -382,6 +404,7 @@ public:
 private:
   mutable PedalBoard* pedal_board_;
   mutable PresetStore* presets_;
+  mutable ChainLibrary* library_;
   ChangeNotifier notifier_;
 };
 
@@ -406,6 +429,103 @@ public:
 
 private:
   mutable PresetStore* presets_;
+  ChangeNotifier notifier_;
+};
+
+// GET /chain_library -- lists every saved chain (name + pedal count), in
+// library order. Backs the chain-library list on the main page. Unlike
+// /presets, there is no "active" entry -- library entries aren't loaded
+// onto the live board directly, only assigned into a slot (see
+// ChainLibraryAssignHandler below) or deleted.
+class ChainLibraryListHandler {
+public:
+  explicit ChainLibraryListHandler(ChainLibrary* library) : library_(library) {}
+
+  crow::response operator()() const {
+    auto all = library_->GetAll();
+    std::vector<crow::json::wvalue> entries_json;
+    for (const auto& entry : all) {
+      crow::json::wvalue json_entry;
+      json_entry["name"] = entry.name;
+      json_entry["pedal_count"] = static_cast<int>(entry.pedals.size());
+      entries_json.push_back(std::move(json_entry));
+    }
+    crow::json::wvalue response;
+    response["entries"] = std::move(entries_json);
+    return response;
+  }
+
+private:
+  mutable ChainLibrary* library_;
+};
+
+// POST /chain_library/<name>/delete -- removes a library entry. Does not
+// touch any preset slot it may have previously been assigned into; slots
+// hold their own copy of the pedal list, independent of the library entry
+// it came from.
+class ChainLibraryDeleteHandler {
+public:
+  ChainLibraryDeleteHandler(ChainLibrary* library, ChangeNotifier notifier)
+      : library_(library), notifier_(notifier) {}
+
+  // `name` arrives as the raw `<string>` route segment -- see
+  // AddPedalHandler above for why this needs qs_decode.
+  crow::response operator()(const std::string& name) const {
+    std::string decoded_name = name;
+    if (!decoded_name.empty()) {
+      int decoded_length = crow::qs_decode(&decoded_name[0]);
+      decoded_name.resize(decoded_length);
+    }
+
+    if (!library_->Delete(decoded_name)) {
+      return crow::response(404);
+    }
+    notifier_.NotifyLibraryChanged();
+    return crow::response(200);
+  }
+
+private:
+  mutable ChainLibrary* library_;
+  ChangeNotifier notifier_;
+};
+
+// POST /chain_library/<name>/assign/<slot> -- copies a library entry's
+// pedal list into preset slot `slot` (0-4), the same way SavePresetHandler
+// writes a slot, and renames that slot to the entry's name. Does not touch
+// the live board -- assigning a slot is independent of what's currently
+// loaded, exactly like re-saving a different slot is.
+class ChainLibraryAssignHandler {
+public:
+  ChainLibraryAssignHandler(PresetStore* presets, ChainLibrary* library,
+                             ChangeNotifier notifier)
+      : presets_(presets), library_(library), notifier_(notifier) {}
+
+  crow::response operator()(const std::string& name, int slot) const {
+    if (slot < 0 || slot >= PresetStore::kNumPresets) {
+      return crow::response(400);
+    }
+
+    std::string decoded_name = name;
+    if (!decoded_name.empty()) {
+      int decoded_length = crow::qs_decode(&decoded_name[0]);
+      decoded_name.resize(decoded_length);
+    }
+
+    Preset entry;
+    if (!library_->Get(decoded_name, &entry)) {
+      return crow::response(404);
+    }
+
+    if (!presets_->Save(slot, entry)) {
+      return crow::response(400);
+    }
+    notifier_.NotifyPresetsChanged();
+    return crow::response(200);
+  }
+
+private:
+  mutable PresetStore* presets_;
+  mutable ChainLibrary* library_;
   ChangeNotifier notifier_;
 };
 
