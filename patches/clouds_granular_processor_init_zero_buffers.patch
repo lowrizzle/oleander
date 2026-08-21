@@ -1,8 +1,37 @@
 diff --git a/clouds/dsp/granular_processor.cc b/clouds/dsp/granular_processor.cc
-index 2f007bc..0c1d9f8 100644
+index 2f007bc..ccff075 100644
 --- a/clouds/dsp/granular_processor.cc
 +++ b/clouds/dsp/granular_processor.cc
-@@ -49,16 +49,40 @@ void GranularProcessor::Init(
+@@ -45,20 +45,45 @@ using namespace stmlib;
+ void GranularProcessor::Init(
+     void* large_buffer, size_t large_buffer_size,
+     void* small_buffer, size_t small_buffer_size) {
++  // Zero the entire object first. On the original embedded target this
++  // class is a single instance constructed once at boot, so the MCU's
++  // own BSS zero-init already guarantees every member -- not just this
++  // class's own fb_/in_/out_/etc. arrays, but the internal state of
++  // every by-value sub-object it owns (player_, ws_player_, looper_,
++  // phase_vocoder_, diffuser_, reverb_, pitch_shifter_, correlator_, the
++  // Svf filters -- none of whose own Init()/constructors necessarily
++  // clear 100% of their own members either) -- starts silent, and
++  // nothing here ever needed to clear it explicitly. That guarantee
++  // doesn't hold for a desktop/Pi port that constructs a fresh
++  // GranularProcessor on demand (Oleander's pedals/clouds_pedal.h does
++  // this on every preset recall): without this, a new instance can
++  // inherit another just-freed instance's real leftover audio/filter
++  // state at the same heap address. A narrower fix that only cleared
++  // fb_/in_/out_/in_downsampled_/out_downsampled_/tail_buffer_ (this
++  // class's own arrays) turned out insufficient in practice -- an
++  // intermittent audible burst persisted on some preset recalls,
++  // pointing at leftover state inside one or more of the sub-objects
++  // above instead. GranularProcessor and everything it owns by value
++  // has no virtual functions anywhere in this call graph (confirmed by
++  // grepping eurorack/clouds/dsp/ and eurorack/stmlib/), so there's no
++  // vtable pointer this could stomp on -- safe to zero wholesale rather
++  // than track down every sub-object's own gaps individually.
++  memset(this, 0, sizeof(*this));
++
+   buffer_[0] = large_buffer;
    buffer_[1] = small_buffer;
    buffer_size_[0] = large_buffer_size;
    buffer_size_[1] = small_buffer_size;
@@ -12,30 +41,6 @@ index 2f007bc..0c1d9f8 100644
    low_fidelity_ = false;
    bypass_ = false;
 -  
-+  silence_ = false;
-+
-+  // in_/in_downsampled_/out_downsampled_/out_/fb_/tail_buffer_ are plain
-+  // member arrays with no constructor-time initializer (see the class
-+  // declaration) -- on the original embedded target this class is a
-+  // single instance constructed once at boot, so the MCU's own BSS
-+  // zero-init already guarantees these start silent, and Init() never
-+  // needed to clear them itself. That guarantee doesn't hold for a
-+  // desktop/Pi port that constructs a fresh GranularProcessor on demand
-+  // (Oleander's pedals/clouds_pedal.h does this on every preset recall):
-+  // without an explicit clear, a new instance can inherit another
-+  // recently-freed object's real leftover audio data at this same heap
-+  // address, most reachable via fb_ (read before being overwritten on
-+  // the very first Process() call, feeding straight into the feedback
-+  // path) -- reported as an audible burst of noise on preset recall that
-+  // wasn't present on the original hardware. Clearing explicitly here
-+  // makes this port's behavior match what real hardware already got for
-+  // free.
-+  memset(fb_, 0, sizeof(fb_));
-+  memset(in_, 0, sizeof(in_));
-+  memset(in_downsampled_, 0, sizeof(in_downsampled_));
-+  memset(out_, 0, sizeof(out_));
-+  memset(out_downsampled_, 0, sizeof(out_downsampled_));
-+  memset(tail_buffer_, 0, sizeof(tail_buffer_));
 +
    src_down_.Init();
    src_up_.Init();

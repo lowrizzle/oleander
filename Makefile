@@ -96,17 +96,17 @@ makedir:
 
 # eurorack/ is a third-party submodule (pichenettes/eurorack) we don't
 # control and can't push a modified commit to, so the one local fix this
-# project needs (GranularProcessor::Init() not clearing several of its
-# own buffers -- see docs/THIRD_PARTY.md's "Modified from upstream" note
-# and pedals/clouds_pedal.h) ships as a patch file instead and gets
-# applied here. Checked via grep rather than a stamp file so this stays
-# correct even after a `git submodule update` resets eurorack/ back to
-# its tracked (unpatched) commit, which would silently discard a
+# project needs (GranularProcessor::Init() not clearing its own memory --
+# see docs/THIRD_PARTY.md's "Modified from upstream" note and
+# pedals/clouds_pedal.h) ships as a patch file instead and gets applied
+# here. Checked via grep rather than a stamp file so this stays correct
+# even after a `git submodule update` resets eurorack/ back to its
+# tracked (unpatched) commit, which would silently discard a
 # previously-applied patch -- a stamp file would go stale and lie about
 # that; grepping the actual file content can't.
 .PHONY: vendor-patches
 vendor-patches:
-	@grep -q "memset(fb_, 0" eurorack/clouds/dsp/granular_processor.cc || \
+	@grep -q "memset(this, 0, sizeof(\*this))" eurorack/clouds/dsp/granular_processor.cc || \
 		(cd eurorack && git apply ../patches/clouds_granular_processor_init_zero_buffers.patch)
 
 all: makedir record server

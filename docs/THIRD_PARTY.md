@@ -25,20 +25,31 @@ file note the lineage for attribution, as the MIT license requires.
 code is used unmodified, only ever called through its public API): a
 small patch, `patches/clouds_granular_processor_init_zero_buffers.patch`,
 changes `clouds/dsp/granular_processor.cc`'s `GranularProcessor::Init()`
-to explicitly zero several of the class's own internal buffers (`fb_`,
-`in_`, `in_downsampled_`, `out_`, `out_downsampled_`, `tail_buffer_`)
-that upstream's constructor/`Init()` never clear. On the original
-embedded target this class is a single instance constructed once at
-boot, so the MCU's BSS zero-init already guaranteed these started
-silent; that guarantee doesn't hold here, where `pedals/clouds_pedal.h`
-constructs a fresh `GranularProcessor` on every preset recall and a new
-instance can inherit another just-freed instance's real leftover audio
-data at the same heap address. Confirmed via a standalone scratchpad
-test (deliberately reusing just-freed, real-audio-filled heap memory for
-a fresh `GranularProcessor`) that this was reachable through `fb_`,
-feeding straight into the feedback path on the very first `Process()`
-call. See `pedals/clouds_pedal.h`'s own comment for the full incident
-(reported on real hardware 2026-08-20).
+to `memset(this, 0, sizeof(*this))` the whole object before anything
+else. On the original embedded target this class is a single instance
+constructed once at boot, so the MCU's BSS zero-init already guaranteed
+every member -- not just this class's own arrays (`fb_`, `in_`,
+`in_downsampled_`, `out_`, `out_downsampled_`, `tail_buffer_`), but the
+internal state of every by-value sub-object it owns (`player_`,
+`ws_player_`, `looper_`, `phase_vocoder_`, `diffuser_`, `reverb_`,
+`pitch_shifter_`, `correlator_`, the `Svf` filters) -- started silent,
+and nothing here ever needed to clear it explicitly. That guarantee
+doesn't hold here, where `pedals/clouds_pedal.h` constructs a fresh
+`GranularProcessor` on every preset recall and a new instance can
+inherit another just-freed instance's real leftover state at the same
+heap address. An earlier, narrower version of this patch only cleared
+this class's own six arrays and turned out insufficient in practice --
+an intermittent audible burst persisted on some preset recalls even
+after that fix, pointing at leftover state inside one of the sub-objects
+above instead. Confirmed via a standalone scratchpad test (deliberately
+reusing just-freed, real-audio-filled heap memory for a fresh
+`GranularProcessor`) that the narrower fix left a small residual and the
+whole-object clear doesn't. `GranularProcessor` and everything it owns
+by value has no virtual functions anywhere in this call graph
+(confirmed by grepping `eurorack/clouds/dsp/` and `eurorack/stmlib/`),
+so there's no vtable pointer this could stomp on. See
+`pedals/clouds_pedal.h`'s own comment for the full incident (reported on
+real hardware 2026-08-20).
 
 `eurorack/` is a third-party submodule (`pichenettes/eurorack`) this
 project has no push access to, so the fix can't be shipped as a bumped
