@@ -21,6 +21,35 @@ Per Mutable Instruments' own request that derivative works not use the
 everywhere user-facing (the web UI, OLED, presets); code comments and this
 file note the lineage for attribution, as the MIT license requires.
 
+**Modified from upstream** (everywhere else in this project, vendored MI
+code is used unmodified, only ever called through its public API): a
+small patch, `patches/clouds_granular_processor_init_zero_buffers.patch`,
+changes `clouds/dsp/granular_processor.cc`'s `GranularProcessor::Init()`
+to explicitly zero several of the class's own internal buffers (`fb_`,
+`in_`, `in_downsampled_`, `out_`, `out_downsampled_`, `tail_buffer_`)
+that upstream's constructor/`Init()` never clear. On the original
+embedded target this class is a single instance constructed once at
+boot, so the MCU's BSS zero-init already guaranteed these started
+silent; that guarantee doesn't hold here, where `pedals/clouds_pedal.h`
+constructs a fresh `GranularProcessor` on every preset recall and a new
+instance can inherit another just-freed instance's real leftover audio
+data at the same heap address. Confirmed via a standalone scratchpad
+test (deliberately reusing just-freed, real-audio-filled heap memory for
+a fresh `GranularProcessor`) that this was reachable through `fb_`,
+feeding straight into the feedback path on the very first `Process()`
+call. See `pedals/clouds_pedal.h`'s own comment for the full incident
+(reported on real hardware 2026-08-20).
+
+`eurorack/` is a third-party submodule (`pichenettes/eurorack`) this
+project has no push access to, so the fix can't be shipped as a bumped
+submodule commit the normal way -- `patches/` holds it instead, and the
+Makefile's `vendor-patches` target (a dependency of both `plot` and
+`server`) applies it automatically on every build, idempotently, without
+needing any extra manual step beyond the usual `git pull && make
+server`. `eurorack/`'s own git state stays untouched/pristine as tracked
+by this repo; the patched file only exists in the actual build output on
+disk.
+
 The MIT license text (reproduced from `eurorack`'s `LICENSE`):
 
 ```

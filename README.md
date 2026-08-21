@@ -30,14 +30,14 @@ cd oleander-effects
 # Run the setup script (requires sudo)
 sudo ./setup/install.sh
 
-# Reboot to apply I2C changes
+# Reboot to apply I2C changes -- the service is already enabled, so it
+# starts automatically once the Pi comes back up, no manual start needed
 sudo reboot
-
-# Start the service
-sudo systemctl start oleander
 
 # Open http://oleander.local in your browser
 ```
+
+If you ever need to start/stop/restart it by hand (e.g. without rebooting): `sudo systemctl start oleander oleander-hardware` (swap `start` for `stop`/`restart`/`status` as needed).
 
 ## Web UI
 
