@@ -4,6 +4,10 @@ A Raspberry Pi 4-based multi-effects pedal system built for synth players and da
 
 ![Oleander's finished hardware pedal next to its web control interface, showing the preset bar, available pedals, and the Sky Chive granular effect on a vintage-synth-style fader panel](docs/images/oleander_hw_and_webui.jpg)
 
+## Demo
+
+[![Oleander demo video](https://img.youtube.com/vi/crPstrjB5wI/maxresdefault.jpg)](https://www.youtube.com/watch?v=crPstrjB5wI)
+
 ## Features
 
 - Real-time audio effects chain (delay, reverb, granular texture, distortion, compression, filters, and more)
