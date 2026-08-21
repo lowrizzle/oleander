@@ -10,7 +10,6 @@
 #include "web/serializers.h"
 
 #include <array>
-#include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstring>
@@ -128,52 +127,29 @@ private:
 // or the preset list calls this exactly once, after the mutation, so the
 // two effects (survive a restart / update the UI+OLED live) always happen
 // together.
-//
-// Also doubles as the one shared choke point for "has a human actually
-// done something yet this boot" (see `interacted` in web/main.cpp): every
-// mutating handler already calls one of the Notify* methods below exactly
-// once per real request, and none of them are ever called from server
-// startup itself (the boot-time PedalBoard::LoadSnapshot restoring the
-// last board state calls straight into PedalBoard, not through a
-// handler/ChangeNotifier) -- so marking `*interacted_` here, rather than
-// in PedalBoard directly, can't be tripped by that restore. Deliberately
-// NOT wired into SwitchStateHandler's raw UpdatesHandler call: that one
-// fires automatically from hardware_service.py's own startup (reporting
-// each latching switch's already-existing physical position), not from an
-// actual press, and would otherwise defeat this gate within a second or
-// two of every boot.
 class ChangeNotifier {
 public:
   ChangeNotifier(PedalBoard* pedal_board, PresetStore* presets,
-                 UpdatesHandler* updates, std::atomic<bool>* interacted)
-      : pedal_board_(pedal_board), presets_(presets), updates_(updates),
-        interacted_(interacted) {}
+                 UpdatesHandler* updates)
+      : pedal_board_(pedal_board), presets_(presets), updates_(updates) {}
 
   void NotifyBoardChanged() const {
     presets_->SetCurrent(pedal_board_->GetPedals());
     updates_->OnUpdate();
-    interacted_->store(true, std::memory_order_relaxed);
   }
 
-  void NotifyPresetsChanged() const {
-    updates_->OnUpdate();
-    interacted_->store(true, std::memory_order_relaxed);
-  }
+  void NotifyPresetsChanged() const { updates_->OnUpdate(); }
 
   // Same signal as NotifyPresetsChanged (both just tell connected clients to
   // re-fetch) -- kept as a separate name so call sites read as "the chain
   // library changed" rather than "a preset slot changed", even though the
   // two currently do the same thing.
-  void NotifyLibraryChanged() const {
-    updates_->OnUpdate();
-    interacted_->store(true, std::memory_order_relaxed);
-  }
+  void NotifyLibraryChanged() const { updates_->OnUpdate(); }
 
 private:
   PedalBoard* pedal_board_;
   PresetStore* presets_;
   UpdatesHandler* updates_;
-  std::atomic<bool>* interacted_;
 };
 
 class RemovePedalHandler {
