@@ -96,7 +96,16 @@ class SkyChivePedal : public Pedal {
   }
 
   SignalType Transform(SignalType signal) override {
-    down_.Push(static_cast<float>(signal), [this](float sample_32k) {
+    // Mute-then-fade startup gate -- see kMuteSamples' comment. While
+    // muted, the engine never sees the real input at all (silence goes in,
+    // nothing gets recorded into its buffer or fed through its feedback
+    // path), and the output is hard-zeroed regardless of what comes out of
+    // it. After that, a short crossfade brings the real signal in without
+    // a hard digital-click edge at the mute boundary.
+    bool muted = startup_position_ < kMuteSamples;
+    float engine_input = muted ? 0.0f : static_cast<float>(signal);
+
+    down_.Push(engine_input, [this](float sample_32k) {
       short v = FloatToInt16(sample_32k);
       block_in_[block_fill_].l = v;
       block_in_[block_fill_].r = v;
@@ -106,16 +115,24 @@ class SkyChivePedal : public Pedal {
       }
     });
 
-    if (output_queue_.empty()) {
-      // Only expected during the ~1ms startup ramp before the first block
-      // has been processed -- silence is the right fallback here, not a
-      // dry pass-through, which would create an inconsistent half-wet
-      // transient.
-      return 0.0f;
+    SignalType out = 0.0f;
+    if (!output_queue_.empty()) {
+      out = output_queue_.front();
+      output_queue_.pop_front();
     }
-    SignalType out = output_queue_.front();
-    output_queue_.pop_front();
-    return out * NextFadeInGain();
+    // Otherwise: only expected during the ~1ms startup ramp before the
+    // first block has been processed -- silence is the right fallback
+    // here, not a dry pass-through, which would create an inconsistent
+    // half-wet transient.
+
+    if (startup_position_ < kMuteSamples + kFadeSamples) {
+      float gain = muted ? 0.0f
+                          : static_cast<float>(startup_position_ - kMuteSamples) /
+                                kFadeSamples;
+      out *= gain;
+      startup_position_++;
+    }
+    return out;
   }
 
   PedalInfo Describe() override {
@@ -224,32 +241,28 @@ class SkyChivePedal : public Pedal {
 
   // Every preset recall rebuilds the whole pedal chain from scratch
   // (PedalBoard::LoadSnapshot), so a newly-recalled Sky Chive is always a
-  // brand new GranularProcessor whose grain scheduler, diffuser, reverb
-  // tail, and feedback high-pass filter have never processed a single
-  // real sample -- there's no equivalent "cold start" on real Clouds
-  // hardware, which is a single always-on instance that just glides to
-  // new parameter values in place. That cold engine, suddenly fed live
-  // audio at whatever feedback/spread/density/reverb the new preset asks
-  // for, can produce an audible transient/burst before it settles into
-  // steady playback (reported on real hardware 2026-08-20, worse with
-  // higher feedback and grain spread). Rather than chase the exact
-  // internal cause across GranularSamplePlayer/Diffuser/Reverb, this
-  // fades the pedal's own output in linearly over kFadeInSamples after
-  // construction -- masks any cold-start transient regardless of which
-  // internal stage produces it, at the cost of a brief (very likely
-  // musically unnoticeable) fade-in on every preset that includes this
-  // pedal.
-  static constexpr size_t kFadeInSamples =
-      static_cast<size_t>(kDeviceSampleRate * 0.25);  // 250 ms
-
-  float NextFadeInGain() {
-    if (fade_in_position_ >= kFadeInSamples) {
-      return 1.0f;
-    }
-    float gain = static_cast<float>(fade_in_position_) / kFadeInSamples;
-    fade_in_position_++;
-    return gain;
-  }
+  // brand new GranularProcessor -- there's no equivalent "cold start" on
+  // real Clouds hardware, which is a single always-on instance that just
+  // glides to new parameter values in place. Reported on real hardware
+  // 2026-08-20: recalling a Sky Chive preset introduced an audible burst
+  // of noise even with no live input playing at the time, worse with
+  // higher feedback/spread. Root-caused to granular_processor.cc's
+  // GranularProcessor::Init() not clearing several of its own internal
+  // buffers (see that file's comment) -- fixed there directly, since
+  // that's genuinely the only place able to reach them. This mute/fade
+  // gate is a second, independent layer on top of that fix, not a
+  // replacement for it: for kMuteSamples after construction, the engine
+  // is fed silence instead of the real signal (so nothing live gets
+  // recorded into its buffer or pushed through its feedback path before
+  // it's had a moment to settle) and the output is hard-zeroed
+  // regardless of what comes out of it; kFadeSamples after that, the
+  // real signal is allowed back in with the output ramped 0->1 rather
+  // than cut over on a single sample, purely to avoid a hard click at
+  // that boundary.
+  static constexpr size_t kMuteSamples =
+      static_cast<size_t>(kDeviceSampleRate * 0.1);  // 100 ms
+  static constexpr size_t kFadeSamples =
+      static_cast<size_t>(kDeviceSampleRate * 0.02);  // 20 ms
 
   static float Clamp01(double v) {
     return static_cast<float>(std::max(0.0, std::min(v, 1.0)));
@@ -388,7 +401,7 @@ class SkyChivePedal : public Pedal {
   size_t block_fill_ = 0;
 
   std::deque<SignalType> output_queue_;
-  size_t fade_in_position_ = 0;
+  size_t startup_position_ = 0;
 
   std::atomic<bool> running_{false};
   std::thread prepare_thread_;
