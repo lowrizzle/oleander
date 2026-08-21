@@ -1,5 +1,6 @@
 #define CROW_MAIN
 
+#include <atomic>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -260,6 +261,23 @@ int main(int argc, char* argv[]) {
     pedal_board.LoadSnapshot(initial_state.pedals);
   }
 
+  // Restoring the last board above means real, potentially heavily-
+  // configured pedals (e.g. Sky Chive with a hot feedback setting) start
+  // existing again the instant the process boots -- but the audio
+  // callback below doesn't feed them anything until a human has actually
+  // done something (ChangeNotifier's Notify* methods, called from every
+  // mutating HTTP handler, latch this true; see its comment). Without
+  // this, a high-feedback Sky Chive preset left active from a previous
+  // session can, given enough unattended time, self-oscillate off of
+  // nothing but the audio interface's own noise floor into a loud,
+  // unexpected tone with zero human involvement -- reported on real
+  // hardware 2026-08-20 (audible ~45s after boot, painful by ~1:15).
+  // That's a real, physically-expected trait of a feedback loop at high
+  // gain (the same reason a PA system howls), not a bug in any one
+  // pedal, so it's addressed here at the boot/interaction boundary
+  // rather than by capping any pedal's parameter range.
+  std::atomic<bool> interacted{false};
+
   ActivePedalHandler active_pedal_handler(&pedal_board);
   CROW_ROUTE(app, "/active_pedals")(active_pedal_handler);
 
@@ -274,7 +292,8 @@ int main(int argc, char* argv[]) {
             updates_handler.RemoveConnection(&conn);
           });
 
-  ChangeNotifier notifier(&pedal_board, &preset_store, &updates_handler);
+  ChangeNotifier notifier(&pedal_board, &preset_store, &updates_handler,
+                           &interacted);
 
   AddPedalHandler add_pedal_handler(&pedal_board, notifier);
   CROW_ROUTE(app, "/add_pedal/<string>")(add_pedal_handler);
@@ -361,8 +380,17 @@ int main(int argc, char* argv[]) {
   Visualizer v(&frame_buffer, /* fps= */ 30);
 
   Playback pb(/* filename= */ "../recording");
-  auto transform = [in_debug_mode, &pedal_board, &pb,
-                    &frame_buffer](SignalType input) {
+  auto transform = [in_debug_mode, &pedal_board, &pb, &frame_buffer,
+                    &interacted](SignalType input) {
+    // See `interacted`'s declaration above: until a human has actually
+    // done something this boot, don't feed the restored board anything
+    // at all -- not just mute the output, but never call Transform() in
+    // the first place, so nothing (e.g. a hot-feedback Sky Chive) can
+    // build up any internal state unattended before someone's actually
+    // here to hear/control it.
+    if (!interacted.load(std::memory_order_relaxed)) {
+      return SignalType(0);
+    }
     auto out = pedal_board.Transform(in_debug_mode ? pb.next() : input);
     frame_buffer.Add(out);
     return out;
